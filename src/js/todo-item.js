@@ -17,13 +17,19 @@ customElements.define(
       }
 
       this.shadowRoot.innerHTML = /* HTML */ `
-        ${this.todo.label}
+        <label>
+          <input type="checkbox" ${this.todo.done ? "checked" : ""}>
+          ${this.todo.done ? `<del>${this.todo.label}</del>` : this.todo.label}
+        </input>
         <button id="delete" aria-label="Supprimer ${this.todo.label}">
           🗑️
         </button>
         <button id="edit" aria-label="Modifier ${this.todo.label}">✏️</button>
       `;
 
+      this.shadowRoot
+        .querySelector("input[type='checkbox']")
+        .addEventListener("input", this.onCheck.bind(this));
       this.shadowRoot
         .getElementById("delete")
         .addEventListener("click", this.onDelete.bind(this));
@@ -32,10 +38,12 @@ customElements.define(
         .addEventListener("click", this.onEdit.bind(this));
     }
 
+    onCheck(event) {
+      todoStore.setDone(this.todo.id, event.target.checked);
+    }
+
     onDelete() {
-      todoStore.deleteTodo(this.todo.id).then(() => {
-        this.remove();
-      });
+      todoStore.delete(this.todo.id);
     }
 
     onEdit() {}

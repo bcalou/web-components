@@ -9,11 +9,7 @@ customElements.define(
     connectedCallback() {
       this.attachShadow({ mode: "open" });
 
-      // Initial rendering
-      this.showTodos(todoStore.getTodos());
-
-      // Subsequent updates
-      // todoStore.subscribe(this.showTodos.bind(this));
+      todoStore.subscribe(this.showTodos.bind(this));
     }
 
     async showTodos(todos) {
@@ -23,6 +19,7 @@ customElements.define(
 
       (await todos).forEach((todo) => {
         const $todoLi = document.createElement("li");
+        $todoLi.setAttribute("data-id", todo.id);
         const $todoItem = document.createElement("todo-item");
 
         // Pass the todo object to the todo-item component

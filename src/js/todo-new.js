@@ -23,7 +23,7 @@ customElements.define(
     onSubmit(event) {
       event.preventDefault();
 
-      todoStore.addTodo(this.$input.value);
+      todoStore.add(this.$input.value);
 
       // Reset the input
       this.$input.value = "";

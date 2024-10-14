@@ -1,116 +1,84 @@
+import { Store } from "./store.js";
+
 /**
- * Storing the todo items in indexedDB
+ * Store for the todos
  */
-class TodoStore {
+class TodoStore extends Store {
   constructor() {
-    this.dbName = "todo-list";
-    this.storeName = "todos";
-    this.listeners = [];
-
-    this.ready = this.initializeDB();
+    super("todo-list", "todo");
   }
 
-  // Register a function that will be called when the database is updated
-  // This way, components can keep track of what's happening
-  subscribe(callback) {
-    this.listeners.push(callback);
-  }
-
-  // Notify the changes to each listeners
-  notify() {
-    const todos = this.getTodos();
-    this.listeners.forEach((callback) => callback(todos));
-  }
-
-  async initializeDB() {
-    return await new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName);
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        db.createObjectStore(this.storeName, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
+  // Get an object containing the total, done and remaining todos count
+  async getCount() {
+    return await this.getAll().then((todos) => {
+      const count = {
+        total: todos.length,
+        done: todos.filter((todo) => todo.done).length,
       };
 
-      request.onsuccess = (event) => {
-        this.db = event.target.result;
-        resolve(this.db);
-      };
+      count.remaining = count.total - count.done;
 
-      request.onerror = (event) => {
-        reject("Database error: " + event.target.errorCode);
-      };
+      return count;
     });
   }
 
-  async execute(getRequest, onSuccess, onError, notify, readwrite) {
-    await this.ready;
-
-    return await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      const request = getRequest(store);
-
-      request.onsuccess = (event) => {
-        resolve(event.target.result);
-
-        if (onSuccess) {
-          onSuccess(request.result);
-        }
-      };
-
-      request.onerror = (event) => {
-        reject(`Error executing todo task: ${event.target.errorCode}`);
-
-        if (onError) {
-          onError();
-        }
-      };
-
-      request.onerror = onError;
-    });
-  }
-
-  async getTodos() {
-    return await this.execute((store) => store.getAll());
-  }
-
-  async addTodo(label) {
+  async add(label) {
     const todo = {
       label,
       done: false,
       createdAt: Date().now,
     };
 
-    return await this.execute(
-      (store) => store.add(todo),
-      (result) => {
+    return await this.execute((store) => store.add(todo), {
+      mode: "readwrite",
+      onSuccess: (result) => {
         console.info(`Added todo #${result}: ${label}`);
         this.notify();
+      },
+    });
+  }
+
+  async setDone(id, done) {
+    const todo = await this.getById(id);
+
+    if (todo) {
+      todo.done = done;
+
+      return this.execute((store) => store.put(todo), {
+        mode: "readwrite",
+        onSuccess: (result) => {
+          console.info(`Set todo #${result} done property to ${done}`);
+          this.notify();
+        },
+      });
+    }
+  }
+
+  async markAllAsDone() {
+    return await this.executeForEach(
+      (cursor, store) =>
+        cursor.value.done
+          ? undefined
+          : store.put({
+              ...cursor.value,
+              done: true,
+            }),
+      {
+        onSuccess: (cursor) =>
+          console.info(`Set todo #${cursor.value.id} done property to true`),
+        onGlobalSuccess: this.notify.bind(this),
       }
     );
   }
 
-  async deleteTodo(id) {
-    await this.ready;
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      const request = store.delete(id);
-
-      request.onsuccess = () => {
-        console.info(`Deleted todo #${id}`);
-        this.notify();
-        resolve(id);
-      };
-
-      request.onerror = (event) => {
-        reject(`Error deleting todo: ${event.target.errorCode}`);
-      };
-    });
+  async deleteDone() {
+    return await this.executeForEach(
+      (cursor) => (cursor.value.done ? cursor.delete() : undefined),
+      {
+        onSuccess: (cursor) => console.info(`Deleted todo #${cursor.value.id}`),
+        onGlobalSuccess: this.notify.bind(this),
+      }
+    );
   }
 }
 
