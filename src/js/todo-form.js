@@ -37,7 +37,9 @@ customElements.define(
         .getRootNode()
         .addEventListener("submit", this.onSubmit.bind(this));
 
-      this.$input.addEventListener("keydown", this.onKeydown.bind(this));
+      this.shadowRoot
+        .getRootNode()
+        .addEventListener("keydown", this.onKeydown.bind(this));
     }
 
     onSubmit(event) {

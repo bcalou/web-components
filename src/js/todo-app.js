@@ -12,7 +12,7 @@ customElements.define(
       this.shadowRoot.innerHTML = /* HTML */ `<h1>Ma Todo-List</h1>
         <todo-form></todo-form>
         <todo-list></todo-list>
-        <p id="state"></p>
+        <p role="status" id="state"></p>
         <button id="markAllAsDone">Cocher toutes les tâches</button>
         <button id="deleteDone">Supprimer les tâches effectuées</button>`;
 
@@ -26,6 +26,7 @@ customElements.define(
       this.$markAllAsDone = this.shadowRoot.getElementById("markAllAsDone");
       this.$deleteDone = this.shadowRoot.getElementById("deleteDone");
 
+      this.update();
       todoStore.subscribe(this.update.bind(this));
 
       this.$markAllAsDone.addEventListener(

@@ -12,7 +12,7 @@ class TodoStore extends Store {
     const todo = {
       label,
       done: false,
-      createdAt: Date().now,
+      createdAt: new Date(),
     };
 
     return super.add(todo);

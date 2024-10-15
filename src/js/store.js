@@ -14,16 +14,12 @@ class Store {
   // Register a function that will be called when the database is updated
   // This way, components can keep track of what's happening
   subscribe(callback) {
-    // First call to get an immediate result
-    const items = this.getAll();
-    callback(items);
-
     this.listeners.push(callback);
   }
 
   // Notify the changes to each listeners
-  notify() {
-    const items = this.getAll();
+  async notify() {
+    const items = await this.getAll();
     this.listeners.forEach((callback) => callback(items));
   }
 

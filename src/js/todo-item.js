@@ -21,20 +21,18 @@ customElements.define(
 
     renderViewMode() {
       this.shadowRoot.innerHTML = /* HTML */ `
-      <form>
-        <label>
-          <input type="checkbox" ${this.todo.done ? "checked" : ""}>
-            ${
-              this.todo.done ? `<del>${this.todo.label}</del>` : this.todo.label
-            }
-          </input>
-        </label>
+        <form>
+          <label>
+            <input type="checkbox" ${this.todo.done ? "checked" : ""}>
+              ${this.todo.label}
+            </input>
+          </label>
+        </form>
         <button id="delete" aria-label="Supprimer ${this.todo.label}">
           🗑️
         </button>
         <button id="edit" aria-label="Modifier ${this.todo.label}">✏️</button>
-      </form>
-    `;
+      `;
 
       this.shadowRoot
         .querySelector("input[type='checkbox']")
@@ -44,7 +42,7 @@ customElements.define(
 
       this.shadowRoot
         .getElementById("delete")
-        .addEventListener("click", () => todoStore.delete(this.todo.id));
+        .addEventListener("click", this.onDelete.bind(this));
 
       this.shadowRoot
         .getElementById("edit")
@@ -58,14 +56,28 @@ customElements.define(
         autofocus
       ></todo-form>`;
 
-      this.shadowRoot.firstChild.addEventListener("submit", (event) =>
-        todoStore.update(this.todo.id, { label: event.detail.label })
+      this.shadowRoot.firstChild.addEventListener(
+        "submit",
+        this.onSubmit.bind(this)
       );
 
       this.shadowRoot.firstChild.addEventListener(
         "quit",
         this.renderViewMode.bind(this)
       );
+    }
+
+    async onSubmit(event) {
+      this.todo.label = event.detail.label;
+      todoStore.update(this.todo.id, { label: this.todo.label });
+
+      this.renderViewMode();
+    }
+
+    onDelete() {
+      todoStore.delete(this.todo.id);
+
+      this.dispatchEvent(new CustomEvent("delete"));
     }
   }
 );
