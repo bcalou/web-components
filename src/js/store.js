@@ -106,6 +106,34 @@ class Store {
     return await this.execute((store) => store.get(id));
   }
 
+  async add(item) {
+    await this.execute((store) => store.add(item), {
+      mode: "readwrite",
+      onSuccess: (result) => {
+        console.info(`Added ${this.storeName} #${result}`);
+        this.notify();
+      },
+    });
+  }
+
+  async update(id, changes) {
+    const item = await this.getById(id);
+
+    if (item) {
+      for (const [key, value] of Object.entries(changes)) {
+        item[key] = value;
+      }
+
+      return this.execute((store) => store.put(item), {
+        mode: "readwrite",
+        onSuccess: () => {
+          console.info(`Updated ${this.storeName} #${id}`);
+          this.notify();
+        },
+      });
+    }
+  }
+
   async delete(id) {
     return this.execute((store) => store.delete(id), {
       mode: "readwrite",

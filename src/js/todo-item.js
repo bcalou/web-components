@@ -16,36 +16,56 @@ customElements.define(
         return;
       }
 
+      this.renderViewMode();
+    }
+
+    renderViewMode() {
       this.shadowRoot.innerHTML = /* HTML */ `
+      <form>
         <label>
           <input type="checkbox" ${this.todo.done ? "checked" : ""}>
-          ${this.todo.done ? `<del>${this.todo.label}</del>` : this.todo.label}
-        </input>
+            ${
+              this.todo.done ? `<del>${this.todo.label}</del>` : this.todo.label
+            }
+          </input>
+        </label>
         <button id="delete" aria-label="Supprimer ${this.todo.label}">
           🗑️
         </button>
         <button id="edit" aria-label="Modifier ${this.todo.label}">✏️</button>
-      `;
+      </form>
+    `;
 
       this.shadowRoot
         .querySelector("input[type='checkbox']")
-        .addEventListener("input", this.onCheck.bind(this));
+        .addEventListener("input", (event) =>
+          todoStore.update(this.todo.id, { done: event.target.checked })
+        );
+
       this.shadowRoot
         .getElementById("delete")
-        .addEventListener("click", this.onDelete.bind(this));
+        .addEventListener("click", () => todoStore.delete(this.todo.id));
+
       this.shadowRoot
         .getElementById("edit")
-        .addEventListener("click", this.onEdit.bind(this));
+        .addEventListener("click", this.renderEditMode.bind(this));
     }
 
-    onCheck(event) {
-      todoStore.setDone(this.todo.id, event.target.checked);
-    }
+    renderEditMode() {
+      this.shadowRoot.innerHTML = /* HTML */ `<todo-form
+        submit-label="Valider"
+        default-value=${this.todo.label}
+        autofocus
+      ></todo-form>`;
 
-    onDelete() {
-      todoStore.delete(this.todo.id);
-    }
+      this.shadowRoot.firstChild.addEventListener("submit", (event) =>
+        todoStore.update(this.todo.id, { label: event.detail.label })
+      );
 
-    onEdit() {}
+      this.shadowRoot.firstChild.addEventListener(
+        "quit",
+        this.renderViewMode.bind(this)
+      );
+    }
   }
 );

@@ -10,11 +10,17 @@ customElements.define(
       this.attachShadow({ mode: "open" });
 
       this.shadowRoot.innerHTML = /* HTML */ `<h1>Ma Todo-List</h1>
-        <todo-new></todo-new>
+        <todo-form></todo-form>
         <todo-list></todo-list>
         <p id="state"></p>
         <button id="markAllAsDone">Cocher toutes les tâches</button>
         <button id="deleteDone">Supprimer les tâches effectuées</button>`;
+
+      this.shadowRoot
+        .querySelector("todo-form")
+        .addEventListener("submit", (event) =>
+          todoStore.add(event.detail.label)
+        );
 
       this.$state = this.shadowRoot.getElementById("state");
       this.$markAllAsDone = this.shadowRoot.getElementById("markAllAsDone");

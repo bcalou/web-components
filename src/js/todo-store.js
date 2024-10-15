@@ -8,6 +8,16 @@ class TodoStore extends Store {
     super("todo-list", "todo");
   }
 
+  add(label) {
+    const todo = {
+      label,
+      done: false,
+      createdAt: Date().now,
+    };
+
+    return super.add(todo);
+  }
+
   // Get an object containing the total, done and remaining todos count
   async getCount() {
     return await this.getAll().then((todos) => {
@@ -20,38 +30,6 @@ class TodoStore extends Store {
 
       return count;
     });
-  }
-
-  async add(label) {
-    const todo = {
-      label,
-      done: false,
-      createdAt: Date().now,
-    };
-
-    return await this.execute((store) => store.add(todo), {
-      mode: "readwrite",
-      onSuccess: (result) => {
-        console.info(`Added todo #${result}: ${label}`);
-        this.notify();
-      },
-    });
-  }
-
-  async setDone(id, done) {
-    const todo = await this.getById(id);
-
-    if (todo) {
-      todo.done = done;
-
-      return this.execute((store) => store.put(todo), {
-        mode: "readwrite",
-        onSuccess: (result) => {
-          console.info(`Set todo #${result} done property to ${done}`);
-          this.notify();
-        },
-      });
-    }
   }
 
   async markAllAsDone() {
