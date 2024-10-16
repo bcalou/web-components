@@ -15,6 +15,13 @@ customElements.define(
 
       this.shadowRoot.innerHTML = /* HTML */ ` <style>
           :host {
+            --todo-color-black: #333;
+            --todo-color-white: white;
+
+            --todo-color-blue-light: #e4f6fc;
+            --todo-color-blue: #bae0ed;
+            --todo-color-blue-dark: #023b4e;
+
             font-family: Monospace;
             font-size: 1.25rem;
             line-height: 1.5;
@@ -23,7 +30,7 @@ customElements.define(
             align-items: center;
             gap: 1rem;
             padding: 2rem 1rem;
-            background: #e4f6fc;
+            background: var(--todo-color-blue-light);
             min-height: 100dvh;
             box-sizing: border-box;
           }
@@ -46,7 +53,7 @@ customElements.define(
           [role="status"] {
             text-align: center;
             margin-block-start: auto;
-            border-block-start: 0.0625rem solid #023b4e;
+            border-block-start: 0.0625rem solid var(--todo-color-blue-dark);
             padding-block-start: 1.5rem;
           }
 
@@ -61,8 +68,8 @@ customElements.define(
             font-size: inherit;
             width: 100%;
             min-height: 3rem;
-            background-color: #023b4e;
-            color: white;
+            background-color: var(--todo-color-blue-dark);
+            color: var(--todo-color-white);
             border: none;
             cursor: pointer;
           }

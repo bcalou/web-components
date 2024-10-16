@@ -20,8 +20,8 @@ customElements.define(
           button {
             height: 2rem;
             width: 2rem;
-            background-color: #bae0ed;
-            border: 0.0625rem solid #023b4e;
+            background-color: var(--todo-color-blue);
+            border: 0.0625rem solid var(--todo-color-blue-dark);
             border-radius: 0.25rem;
             font-size: 1.25rem;
             display: inline-flex;
