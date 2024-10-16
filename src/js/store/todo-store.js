@@ -20,20 +20,20 @@ class TodoStore extends Store {
 
   // Get an object containing the total, done and remaining todos count
   async getCount() {
-    return await this.getAll().then((todos) => {
-      const count = {
-        total: todos.length,
-        done: todos.filter((todo) => todo.done).length,
-      };
+    const todos = await this.getAll();
 
-      count.remaining = count.total - count.done;
+    const count = {
+      total: todos.length,
+      done: todos.filter((todo) => todo.done).length,
+    };
 
-      return count;
-    });
+    count.remaining = count.total - count.done;
+
+    return count;
   }
 
   async markAllAsDone() {
-    return await this.executeForEach(
+    return await this.writeForEach(
       (cursor, store) =>
         cursor.value.done
           ? undefined
@@ -41,21 +41,15 @@ class TodoStore extends Store {
               ...cursor.value,
               done: true,
             }),
-      {
-        onSuccess: (cursor) =>
-          console.info(`Set todo #${cursor.value.id} done property to true`),
-        onGlobalSuccess: this.notify.bind(this),
-      }
+      (cursor) =>
+        console.info(`Set todo #${cursor.value.id} done property to true`)
     );
   }
 
   async deleteDone() {
-    return await this.executeForEach(
+    return await this.writeForEach(
       (cursor) => (cursor.value.done ? cursor.delete() : undefined),
-      {
-        onSuccess: (cursor) => console.info(`Deleted todo #${cursor.value.id}`),
-        onGlobalSuccess: this.notify.bind(this),
-      }
+      (cursor) => console.info(`Deleted todo #${cursor.value.id}`)
     );
   }
 }

@@ -7,6 +7,7 @@ class Store {
     this.storeName = storeName;
 
     this.listeners = [];
+    this.itemsListeners = new Map();
 
     this.ready = this.initializeDB();
   }
@@ -15,11 +16,18 @@ class Store {
   // This way, components can keep track of what's happening
   subscribe(callback) {
     this.listeners.push(callback);
+
+    // Return a method that can be called to unsubscribe
+    return () => this.unsubscribe(callback);
+  }
+
+  unsubscribe(callback) {
+    this.listeners = this.listeners.filter((listener) => listener !== callback);
   }
 
   // Notify the changes to each listeners
   async notify() {
-    const items = await this.getAll();
+    const items = new Map((await this.getAll()).map((item) => [item.id, item]));
     this.listeners.forEach((callback) => callback(items));
   }
 
@@ -46,23 +54,20 @@ class Store {
     });
   }
 
-  // Base function to read or write in the table
-  async execute(getRequest, options = {}) {
+  // Base function to perform anything in the table, used by read & write
+  async request(getRequest, mode, onSuccess) {
     await this.ready;
 
     return await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(
-        this.storeName,
-        options.mode ?? "readonly"
-      );
+      const transaction = this.db.transaction(this.storeName, mode);
       const store = transaction.objectStore(this.storeName);
       const request = getRequest(store);
 
       request.onsuccess = () => {
         resolve(request.result);
 
-        if (options.onSuccess) {
-          options.onSuccess(request.result, store);
+        if (onSuccess) {
+          onSuccess(request.result, store);
         }
       };
 
@@ -72,44 +77,60 @@ class Store {
     });
   }
 
+  // Base function to read in the table
+  async read(getRequest) {
+    return this.request(getRequest, "readonly");
+  }
+
+  // Base function to write in the table
+  async write(getRequest, onSuccess, notify = true) {
+    return this.request(getRequest, "readwrite", (result, store) => {
+      if (notify) {
+        this.notify();
+      }
+
+      if (onSuccess) {
+        onSuccess(result, store);
+      }
+    });
+  }
+
   // Base function to perform an operation on each item
-  async executeForEach(getRequest, options = {}) {
-    return await this.execute((store) => store.openCursor(), {
-      mode: "readwrite",
-      onSuccess: (result, store) => {
+  async writeForEach(getRequest, onSuccess) {
+    return await this.write(
+      (store) => store.openCursor(),
+      (result, store) => {
         const cursor = result;
 
         if (cursor) {
           const request = getRequest(cursor, store);
 
-          if (request && options.onSuccess) {
-            request.onsuccess = options.onSuccess(cursor);
+          if (request && onSuccess) {
+            request.onsuccess = onSuccess(cursor);
           }
 
           cursor.continue();
-        } else if (options.onGlobalSuccess) {
-          options.onGlobalSuccess();
+        } else {
+          this.notify();
         }
       },
-    });
+      false // Don't notify for each element
+    );
   }
 
   async getAll() {
-    return await this.execute((store) => store.getAll());
+    return await this.read((store) => store.getAll());
   }
 
   async getById(id) {
-    return await this.execute((store) => store.get(id));
+    return await this.read((store) => store.get(id));
   }
 
   async add(item) {
-    await this.execute((store) => store.add(item), {
-      mode: "readwrite",
-      onSuccess: (result) => {
-        console.info(`Added ${this.storeName} #${result}`);
-        this.notify();
-      },
-    });
+    await this.write(
+      (store) => store.add(item),
+      (result) => console.info(`Added ${this.storeName} #${result}`)
+    );
   }
 
   async update(id, changes) {
@@ -120,24 +141,18 @@ class Store {
         item[key] = value;
       }
 
-      return this.execute((store) => store.put(item), {
-        mode: "readwrite",
-        onSuccess: () => {
-          console.info(`Updated ${this.storeName} #${id}`);
-          this.notify();
-        },
-      });
+      return this.write(
+        (store) => store.put(item),
+        () => console.info(`Updated ${this.storeName} #${id}`)
+      );
     }
   }
 
   async delete(id) {
-    return this.execute((store) => store.delete(id), {
-      mode: "readwrite",
-      onSuccess: () => {
-        console.info(`Deleted ${this.storeName} #${id}`);
-        this.notify();
-      },
-    });
+    return this.write(
+      (store) => store.delete(id),
+      () => console.info(`Deleted ${this.storeName} #${id}`)
+    );
   }
 }
 

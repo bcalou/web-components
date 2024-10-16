@@ -1,4 +1,6 @@
-import { todoStore } from "./todo-store.js";
+import { todoStore } from "../store/todo-store.js";
+import "./todo-form.js";
+import "./todo-list.js";
 
 /**
  * The root component for the whole todo experience
@@ -9,25 +11,28 @@ customElements.define(
     connectedCallback() {
       this.attachShadow({ mode: "open" });
 
-      this.shadowRoot.innerHTML = /* HTML */ `<h1>Ma Todo-List</h1>
+      this.shadowRoot.innerHTML = /* HTML */ ` <h1>Ma Todo-List</h1>
         <todo-form></todo-form>
         <todo-list></todo-list>
         <p role="status" id="state"></p>
         <button id="markAllAsDone">Cocher toutes les tâches</button>
         <button id="deleteDone">Supprimer les tâches effectuées</button>`;
 
-      this.shadowRoot
-        .querySelector("todo-form")
-        .addEventListener("submit", (event) =>
-          todoStore.add(event.detail.label)
-        );
-
+      this.$todoForm = this.shadowRoot.querySelector("todo-form");
+      this.$todoList = this.shadowRoot.querySelector("todo-list");
       this.$state = this.shadowRoot.getElementById("state");
       this.$markAllAsDone = this.shadowRoot.getElementById("markAllAsDone");
       this.$deleteDone = this.shadowRoot.getElementById("deleteDone");
 
-      this.update();
-      todoStore.subscribe(this.update.bind(this));
+      this.$todoForm.addEventListener("submit", (event) =>
+        todoStore.add(event.detail.label)
+      );
+
+      // Transfer focus to form if list becomes empty
+      this.$todoList.addEventListener(
+        "empty",
+        this.$todoForm.focus.bind(this.$todoForm)
+      );
 
       this.$markAllAsDone.addEventListener(
         "click",
@@ -38,6 +43,13 @@ customElements.define(
         "click",
         todoStore.deleteDone.bind(todoStore)
       );
+
+      this.update();
+      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+    }
+
+    disconnectedCallback() {
+      this.unsubscribe();
     }
 
     async update() {
@@ -50,8 +62,9 @@ customElements.define(
       this.$deleteDone.disabled = done === 0;
     }
 
-    async setState(total, remaining) {
+    setState(total, remaining) {
       let state = "";
+      Gamepad;
 
       if (total === 0) {
         state = "Aucune tâche pour le moment";

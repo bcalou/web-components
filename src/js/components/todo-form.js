@@ -9,7 +9,7 @@ customElements.define(
     }
 
     connectedCallback() {
-      this.attachShadow({ mode: "open" });
+      this.attachShadow({ mode: "open", delegatesFocus: true });
 
       this.shadowRoot.innerHTML = /* HTML */ `<form>
         <label
