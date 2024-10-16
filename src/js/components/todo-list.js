@@ -1,5 +1,4 @@
 import { todoStore } from "../store/todo-store.js";
-import "./todo-item.js";
 
 /**
  * The actual list of items
@@ -10,7 +9,20 @@ customElements.define(
     connectedCallback() {
       this.attachShadow({ mode: "open" });
 
-      this.shadowRoot.innerHTML = `<ol></ol>`;
+      this.shadowRoot.innerHTML = /* HTML */ `<style>
+          :host {
+            width: 100%;
+          }
+
+          ol {
+            list-style: none;
+            padding-inline-start: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          }
+        </style>
+        <ol></ol>`;
 
       this.init();
     }
@@ -41,15 +53,15 @@ customElements.define(
       $todoItem.addEventListener("delete", () => this.onDelete($todoLi));
 
       $todoLi.appendChild($todoItem);
-      this.shadowRoot.firstChild.appendChild($todoLi);
+      this.shadowRoot.lastElementChild.appendChild($todoLi);
     }
 
     // Handle focus position when an item is deleted
     onDelete($todoLi) {
       if ($todoLi.nextSibling) {
-        $todoLi.nextSibling.firstChild.focus();
+        $todoLi.nextSibling.firstElementChild.focus();
       } else if ($todoLi.previousSibling) {
-        $todoLi.previousSibling.firstChild.focus();
+        $todoLi.previousSibling.firstElementChild.focus();
       } else {
         this.dispatchEvent(new CustomEvent("empty"));
       }

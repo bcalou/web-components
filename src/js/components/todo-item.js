@@ -42,17 +42,56 @@ customElements.define(
 
     renderViewMode(focusEditButton = false) {
       this.shadowRoot.innerHTML = /* HTML */ `
+        <style>
+          :host {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+          }
+
+          label {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            user-select: none;
+            cursor: pointer;
+            overflow-wrap: anywhere;
+          }
+
+          input {
+            height: 1.5rem;
+            width: 1.5rem;
+            flex-shrink: 0;
+          }
+
+          label:has(input:checked) span {
+            text-decoration: line-through;
+          }
+
+          .actions {
+            flex-shrink: 0;
+          }
+        </style>
         <form>
           <label>
-            <input type="checkbox" ${this.todo.done ? "checked" : ""}>
-              ${this.todo.label}
-            </input>
+            <input type="checkbox" ${this.todo.done ? "checked" : ""} />
+            <span>${this.todo.label}</span>
           </label>
         </form>
-        <button id="delete" aria-label="Supprimer ${this.todo.label}">
-          🗑️
-        </button>
-        <button id="edit" aria-label="Modifier ${this.todo.label}">✏️</button>
+        <div class="actions">
+          <todo-icon-button
+            id="delete"
+            icon="🗑️"
+            label="Supprimer ${this.todo.label}"
+          ></todo-icon-button>
+          <todo-icon-button
+            id="edit"
+            icon="✏️"
+            label="Modifier ${this.todo.label}"
+          ></todo-icon-button>
+        </div>
       `;
 
       this.$input = this.shadowRoot.querySelector("input");
@@ -79,17 +118,17 @@ customElements.define(
 
     renderEditMode() {
       this.shadowRoot.innerHTML = /* HTML */ `<todo-form
-        submit-label="Valider"
-        default-value=${this.todo.label}
+        submit-icon="✔️"
+        default-value="${this.todo.label}"
         autofocus
       ></todo-form>`;
 
-      this.shadowRoot.firstChild.addEventListener(
+      this.shadowRoot.firstElementChild.addEventListener(
         "submit",
         this.onSubmit.bind(this)
       );
 
-      this.shadowRoot.firstChild.addEventListener("quit", () =>
+      this.shadowRoot.firstElementChild.addEventListener("quit", () =>
         this.renderViewMode(true)
       );
     }
