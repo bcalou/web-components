@@ -4,9 +4,12 @@
 customElements.define(
   "todo-form",
   class TodoForm extends HTMLElement {
-    static get observedAttributes() {
-      return ["autofocus", "default-value", "submit-icon", "submit-label"];
-    }
+    static observedAttributes = [
+      "autofocus",
+      "default-value",
+      "submit-icon",
+      "submit-label",
+    ];
 
     connectedCallback() {
       this.attachShadow({ mode: "open", delegatesFocus: true });
