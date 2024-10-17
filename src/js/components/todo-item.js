@@ -66,7 +66,7 @@ customElements.define(
             flex-shrink: 0;
           }
 
-          label:has(input:checked) span {
+          input:checked ~ span {
             text-decoration: line-through;
           }
 
