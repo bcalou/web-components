@@ -1,4 +1,4 @@
-(function () {
+function handleInstallPrompt() {
   const $todoApp = document.querySelector("todo-app");
 
   if (!$todoApp) return;
@@ -30,4 +30,13 @@
     installPrompt = null;
     $todoApp.removeAttribute("show-install-button");
   });
-})();
+}
+
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    console.info("Service worker registration", registration);
+  }
+}
+
+registerServiceWorker();
