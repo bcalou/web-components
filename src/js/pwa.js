@@ -34,9 +34,7 @@ function handleInstallPrompt() {
 
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    const registration = await navigator.serviceWorker.register(
-      "/src/js/sw.js"
-    );
+    const registration = await navigator.serviceWorker.register("/sw.js");
     console.info("Service worker registration", registration);
   }
 }
