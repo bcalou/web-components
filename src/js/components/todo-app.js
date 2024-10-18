@@ -10,6 +10,8 @@ import "./todo-list.js";
 customElements.define(
   "todo-app",
   class TodoApp extends HTMLElement {
+    static observedAttributes = ["show-install-button"];
+
     connectedCallback() {
       this.attachShadow({ mode: "open" });
 
@@ -129,6 +131,16 @@ customElements.define(
 
       this.update();
       this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+    }
+
+    attributeChangedCallback(name, oldVal, newVal) {
+      if (name === "show-install-button" && this.$install) {
+        if (newVal === "true") {
+          this.$install.removeAttribute("hidden");
+        } else {
+          this.$install.setAttribute("hidden", "");
+        }
+      }
     }
 
     disconnectedCallback() {

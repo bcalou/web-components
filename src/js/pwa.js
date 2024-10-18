@@ -9,6 +9,7 @@
     event.preventDefault();
     installPrompt = event;
     $todoApp.setAttribute("show-install-button", "true");
+
     console.info("beforeinstallprompt event fired");
   });
 
@@ -16,13 +17,13 @@
     if (!installPrompt) return;
 
     const result = await installPrompt.prompt();
-    console.log("Install prompt result", result);
+    console.info("Install prompt result", result);
 
     Notification.requestPermission().then((result) => {
       if (result === "granted") {
-        console.log("Notifications granted");
+        console.info("Notifications granted");
       } else {
-        console.log("Notifications refusées");
+        console.info("Notifications refusées");
       }
     });
 
