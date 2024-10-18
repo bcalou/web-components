@@ -1,14 +1,14 @@
 const cacheName = "MyCache_1";
 const appShellFiles = [
   "/index.html",
-  "css/reset.css",
-  "js/components/todo-app.js",
-  "js/components/todo-form.js",
-  "js/components/todo-icon-button.js",
-  "js/components/todo-item.js",
-  "js/components/todo-list.js",
-  "js/store/store.js",
-  "js/store/todo-store.js",
+  "/src/css/reset.css",
+  "/src/js/components/todo-app.js",
+  "/src/js/components/todo-form.js",
+  "/src/js/components/todo-icon-button.js",
+  "/src/js/components/todo-item.js",
+  "/src/js/components/todo-list.js",
+  "/src/js/store/store.js",
+  "/src/js/store/todo-store.js",
 ];
 
 self.addEventListener("install", (event) => {
