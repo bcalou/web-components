@@ -29,14 +29,17 @@ customElements.define(
             flex-direction: column;
             align-items: center;
             gap: 1rem;
-            padding: 2rem 1rem;
+            padding: 1rem 1rem 2rem;
             background: var(--todo-color-blue-light);
             min-height: 100dvh;
             box-sizing: border-box;
           }
 
-          :host > div {
+          :host > * {
             max-width: 25rem;
+          }
+
+          :host > div {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
@@ -80,6 +83,7 @@ customElements.define(
           }
         </style>
 
+        <button id="install" hidden>Installer l'application</button>
         <h1>Ma Todo-List</h1>
 
         <div>
@@ -92,11 +96,16 @@ customElements.define(
           </div>
         </div>`;
 
+      this.$install = this.shadowRoot.getElementById("install");
       this.$todoForm = this.shadowRoot.querySelector("todo-form");
       this.$todoList = this.shadowRoot.querySelector("todo-list");
       this.$state = this.shadowRoot.getElementById("state");
       this.$markAllAsDone = this.shadowRoot.getElementById("markAllAsDone");
       this.$deleteDone = this.shadowRoot.getElementById("deleteDone");
+
+      this.$install.addEventListener("click", () =>
+        this.dispatchEvent(new CustomEvent("install"))
+      );
 
       this.$todoForm.addEventListener("submit", (event) =>
         todoStore.add(event.detail.label)
