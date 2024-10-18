@@ -1,9 +1,10 @@
 {
   "name": "TodoList 2024",
   "short_name": "TodoList",
+  "description": "Reprenez le contrôle sur votre vie, tout simplement",
   "theme_color": "#023b4e",
   "background_color": "#e4f6fc",
-  "display": "minimal-ui",
+  "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/",
@@ -47,6 +48,22 @@
       "src": "src/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "src/screenshots/narrow.png",
+      "sizes": "390x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Interface de l'application TodoList"
+    },
+    {
+      "src": "src/screenshots/wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Interface de l'application TodoList"
     }
   ]
 }
