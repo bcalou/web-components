@@ -1,38 +1,42 @@
 const cacheName = "MyCache_1";
-const precachedResources = ["/"];
-
-async function precache() {
-  const cache = await caches.open(cacheName);
-  return cache.addAll(precachedResources);
-}
-
-function isCacheable(request) {
-  const url = new URL(request.url);
-  return (
-    url.pathname.endsWith(".html") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".js")
-  );
-}
-
-async function cacheFirstWithRefresh(request) {
-  const fetchResponsePromise = fetch(request).then(async (networkResponse) => {
-    if (networkResponse.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  });
-
-  return (await caches.match(request)) || (await fetchResponsePromise);
-}
+const appShellFiles = [
+  "/index.html",
+  "css/reset.css",
+  "js/components/todo-app.js",
+  "js/components/todo-form.js",
+  "js/components/todo-icon-button.js",
+  "js/components/todo-item.js",
+  "js/components/todo-list.js",
+  "js/store/store.js",
+  "js/store/todo-store.js",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(precache());
+  console.log("[Service Worker] Install");
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(cacheName);
+      console.log("[Service Worker] Caching all: app shell");
+      await cache.addAll(appShellFiles);
+    })()
+  );
 });
 
 self.addEventListener("fetch", (event) => {
-  if (isCacheable(event.request)) {
-    event.respondWith(cacheFirstWithRefresh(event.request));
-  }
+  event.respondWith(
+    (async () => {
+      const r = await caches.match(event.request);
+      console.log(`[Service Worker] Fetching resource: ${event.request.url}`);
+      if (r) {
+        return r;
+      }
+      const response = await fetch(event.request);
+      const cache = await caches.open(cacheName);
+      console.log(
+        `[Service Worker] Caching new resource: ${event.request.url}`
+      );
+      cache.put(event.request, response.clone());
+      return response;
+    })()
+  );
 });
