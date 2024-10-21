@@ -1,13 +1,12 @@
 /**
  * Base class for an IndexedDB store
- */
+ */https://github.com/bcalou/web-components/edit/main/src/js/store/store.js
 class Store {
   constructor(dbName, storeName) {
     this.dbName = dbName;
     this.storeName = storeName;
 
     this.listeners = [];
-    this.itemsListeners = new Map();
 
     this.ready = this.initializeDB();
   }
