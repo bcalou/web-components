@@ -138,7 +138,6 @@ customElements.define(
 
     setState(total, remaining) {
       let state = "";
-      Gamepad;
 
       if (total === 0) {
         state = "Aucune tâche pour le moment 🙏";
