@@ -80,7 +80,7 @@ customElements.define(
       // Check if todos need to be removed
       this.todos.forEach((todo) => {
         if (!updatedTodos.get(todo.id)) {
-          const $li = this.shadowRoot
+          this.shadowRoot
             .querySelector(`[todo-id="${todo.id}"]`)
             .parentElement.remove();
 
