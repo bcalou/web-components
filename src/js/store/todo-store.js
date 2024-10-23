@@ -11,7 +11,7 @@ class TodoStore extends Store {
   add(label) {
     const todo = {
       label,
-      done: false,
+      done: 0, // Use 0 instead of false to prepare the use of sqlite
       createdAt: new Date(),
     };
 
