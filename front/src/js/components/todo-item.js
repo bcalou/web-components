@@ -18,6 +18,10 @@ customElements.define(
       if (this.unsubscribe) {
         this.unsubscribe();
       }
+
+      if (this.hasFocus) {
+        this.dispatchEvent(new CustomEvent("delete"));
+      }
     }
 
     async init() {
@@ -38,6 +42,18 @@ customElements.define(
       this.renderViewMode();
 
       this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+
+      this.shadowRoot.addEventListener("focusin", () => (this.hasFocus = true));
+      this.shadowRoot.addEventListener(
+        "focusout",
+        (event) =>
+          (this.hasFocus =
+            // Absence of relatedTarget = the item was just deleted
+            // (in that case, we consider that the focus is still on the item)
+            !event.relatedTarget ||
+            // Related target included in shadowRoot : still has focus
+            this.shadowRoot.contains(event.relatedTarget))
+      );
     }
 
     renderViewMode(focusEditButton = false) {
@@ -96,15 +112,16 @@ customElements.define(
         </div>
       `;
 
-      this.shadowRoot
-        .querySelector("input")
-        .addEventListener("input", (event) =>
-          todoStore.update(this.todo.id, { done: event.target.checked })
-        );
+      this.$label = this.shadowRoot.getElementById("label");
+
+      this.$input = this.shadowRoot.querySelector("input");
+      this.$input.addEventListener("input", (event) =>
+        todoStore.update(this.todo.id, { done: event.target.checked })
+      );
 
       this.shadowRoot
         .getElementById("delete")
-        .addEventListener("click", this.onDelete.bind(this));
+        .addEventListener("click", () => todoStore.delete(this.todo.id));
 
       this.$edit = this.shadowRoot.getElementById("edit");
       this.$edit.addEventListener("click", this.renderEditMode.bind(this));
@@ -112,12 +129,6 @@ customElements.define(
       if (focusEditButton) {
         this.$edit.focus();
       }
-    }
-
-    onDelete() {
-      todoStore.delete(this.todo.id);
-
-      this.dispatchEvent(new CustomEvent("delete"));
     }
 
     renderEditMode() {
@@ -149,30 +160,21 @@ customElements.define(
     update(updatedTodos) {
       const updatedTodo = updatedTodos.get(this.todo.id);
 
-      if (updatedTodo && !this.isEqual(updatedTodo, this.todo)) {
-        this.todo = updatedTodo;
+      if (!updatedTodo) return;
 
-        if (this.mode === "view") {
-          this.renderViewMode();
+      // In view mode, update the todo if there are changes
+      if (this.mode === "view") {
+        if (updatedTodo.label !== this.todo.label) {
+          this.$label.innerHTML = updatedTodo.label;
         }
-      }
-    }
 
-    isEqual(a, b) {
-      const aKeys = Object.keys(a);
-      const bKeys = Object.keys(b);
-
-      if (aKeys !== bKeys) {
-        return false;
-      }
-
-      for (let key of aKeys) {
-        if (a[key] !== b[key]) {
-          return false;
+        if (updatedTodo.done !== this.todo.done) {
+          this.$input.checked = !!updatedTodo.done;
         }
       }
 
-      return true;
+      // Update local state
+      this.todo = updatedTodo;
     }
   }
 );

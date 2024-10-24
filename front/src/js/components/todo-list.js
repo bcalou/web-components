@@ -57,7 +57,9 @@ customElements.define(
     }
 
     // Handle focus position when an item is deleted
+    // TODO : handle deletion from backend...next sibling not available!
     onDelete($todoLi) {
+      console.log("delete", $todoLi.nextSibling);
       if ($todoLi.nextSibling) {
         $todoLi.nextSibling.firstElementChild.focus();
       } else if ($todoLi.previousSibling) {

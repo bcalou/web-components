@@ -58,6 +58,7 @@ class TodoStore {
   }
 
   // Replace the store content with a new list of items (backend update)
+  // TODO : review this VS one by one update
   async replaceStoreContent(items) {
     this.write(
       (store) => store.clear(),
