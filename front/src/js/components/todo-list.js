@@ -1,4 +1,4 @@
-import { todoStore } from "../store/todo-store.js";
+import { todoManager } from "../data/todo-manager.js";
 
 /**
  * The actual list of items
@@ -36,12 +36,12 @@ customElements.define(
     async init() {
       // Get a local record of the todos for clever DOM updates
       this.todos = new Map(
-        (await todoStore.getAll()).map((todo) => [todo.id, todo])
+        (await todoManager.getAll()).map((todo) => [todo.id, todo])
       );
 
       this.todos.forEach(this.showTodo.bind(this));
 
-      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
     }
 
     showTodo(todo) {
@@ -69,6 +69,8 @@ customElements.define(
     }
 
     update(updatedTodos) {
+      console.log({ updatedTodos });
+
       // Check if there are new todos to display
       updatedTodos.forEach((updatedTodo) => {
         if (!this.todos.get(updatedTodo.id)) {

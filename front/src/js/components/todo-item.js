@@ -1,5 +1,4 @@
-import { todoManager } from "../store/todo-manager.js";
-import { todoStore } from "../store/todo-store.js";
+import { todoManager } from "../data/todo-manager.js";
 
 /**
  * Detail of a todo list item and associated actions (delete, rename...)
@@ -33,7 +32,7 @@ customElements.define(
         return;
       }
 
-      this.todo = await todoStore.getById(id);
+      this.todo = await todoManager.getById(id);
 
       if (!this.todo) {
         console.error(`No todo-item found with id ${id}`);
@@ -42,7 +41,7 @@ customElements.define(
 
       this.renderViewMode();
 
-      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
 
       this.shadowRoot.addEventListener("focusin", () => (this.hasFocus = true));
       this.shadowRoot.addEventListener(

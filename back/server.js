@@ -33,6 +33,9 @@ wss.on("connection", (ws) => {
 
     setTimeout(() => {
       switch (message.action) {
+        case "getAll":
+          getAll(ws);
+          break;
         case "add":
           add(ws, message);
           break;
@@ -86,7 +89,7 @@ function getAll(ws) {
     }
 
     console.log(`Sending todo list (${rows.length} item(s))`);
-    ws.send(JSON.stringify({ action: "getAll", payload: { todos: rows } }));
+    ws.send(JSON.stringify({ action: "setAll", payload: { todos: rows } }));
   });
 }
 
@@ -127,10 +130,10 @@ function updateById(ws, message) {
     args.push(changes[field]);
   });
 
-  const idsToUpdate = Array.isArray(id) ? id.map(() => "?").join(", ") : "?";
+  const idsToUpdate = Array.isArray(id) ? id : [id];
 
-  query += ` WHERE id IN (${idsToUpdate})`;
-  args.push(id);
+  query += ` WHERE id IN (${idsToUpdate.map(() => "?").join(", ")})`;
+  args.push(...idsToUpdate);
 
   db.run(query, args, function (err) {
     if (err) {
@@ -150,11 +153,11 @@ function updateById(ws, message) {
 function deleteById(ws, message) {
   const id = message.payload.id;
 
-  const idsToDelete = Array.isArray(id) ? id.map(() => "?").join(", ") : "?";
+  const idsToDelete = Array.isArray(id) ? id : [id];
 
   db.run(
-    `DELETE FROM todos WHERE id IN (${idsToDelete})`,
-    [id],
+    `DELETE FROM todos WHERE id IN (${idsToDelete.map(() => "?").join(", ")})`,
+    [...idsToDelete],
     function (err) {
       if (err) {
         ws.send(JSON.stringify({ error: `Failed to delete item ${id}` }));

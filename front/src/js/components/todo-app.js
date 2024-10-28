@@ -1,5 +1,4 @@
-import { todoManager } from "../store/todo-manager.js";
-import { todoStore } from "../store/todo-store.js";
+import { todoManager } from "../data/todo-manager.js";
 import "./todo-form.js";
 import "./todo-icon-button.js";
 import "./todo-item.js";
@@ -122,16 +121,16 @@ customElements.define(
 
       this.$markAllAsDone.addEventListener(
         "click",
-        todoStore.markAllAsDone.bind(todoStore)
+        todoManager.markAllAsDone.bind(todoManager)
       );
 
       this.$deleteDone.addEventListener(
         "click",
-        todoStore.deleteDone.bind(todoStore)
+        todoManager.deleteDone.bind(todoManager)
       );
 
       this.update();
-      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
+      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
@@ -149,7 +148,7 @@ customElements.define(
     }
 
     async update() {
-      const { total, done, remaining } = await todoStore.getCount();
+      const { total, done, remaining } = await todoManager.getCount();
 
       this.setState(total, remaining);
 
