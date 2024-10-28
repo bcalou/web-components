@@ -1,3 +1,4 @@
+import { todoManager } from "../store/todo-manager.js";
 import { todoStore } from "../store/todo-store.js";
 
 /**
@@ -32,7 +33,7 @@ customElements.define(
         return;
       }
 
-      this.todo = await todoStore.getById(parseInt(id));
+      this.todo = await todoStore.getById(id);
 
       if (!this.todo) {
         console.error(`No todo-item found with id ${id}`);
@@ -116,12 +117,12 @@ customElements.define(
 
       this.$input = this.shadowRoot.querySelector("input");
       this.$input.addEventListener("input", (event) =>
-        todoStore.update(this.todo.id, { done: event.target.checked })
+        todoManager.updateById(this.todo.id, { done: event.target.checked })
       );
 
       this.shadowRoot
         .getElementById("delete")
-        .addEventListener("click", () => todoStore.delete(this.todo.id));
+        .addEventListener("click", () => todoManager.deleteById(this.todo.id));
 
       this.$edit = this.shadowRoot.getElementById("edit");
       this.$edit.addEventListener("click", this.renderEditMode.bind(this));
@@ -152,7 +153,7 @@ customElements.define(
 
     onSubmit(event) {
       this.todo.label = event.detail.label;
-      todoStore.update(this.todo.id, { label: this.todo.label });
+      todoManager.updateById(this.todo.id, { label: this.todo.label });
 
       this.renderViewMode(true);
     }

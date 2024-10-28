@@ -14,22 +14,15 @@ class TodoWS {
 
       this.ws.onopen = () => {
         console.info("WS connection open");
-
         resolve(this.ws);
       };
 
-      this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        this.notify(data.items);
-      };
+      this.ws.onmessage = (event) => this.notify(JSON.parse(event.data));
 
-      this.ws.onclose = () => {
+      this.ws.onclose = () =>
         console.info("Disconnected from WebSocket server");
-      };
 
-      this.ws.onerror = (error) => {
-        reject(`WebSocket Error: ${error}`);
-      };
+      this.ws.onerror = (error) => reject(`WebSocket Error: ${error}`);
     });
   }
 
@@ -40,42 +33,16 @@ class TodoWS {
   }
 
   // Notify the changes to each listeners
-  async notify(data) {
+  notify(data) {
     this.listeners.forEach((callback) => callback(data));
   }
 
-  async add(item) {
+  // Send a message to the web socket server
+  async send(message) {
     await this.ready;
 
-    this.ws.send(
-      JSON.stringify({ action: "add", payload: { label: item.label } })
-    );
-  }
-
-  async update(id, changes) {
-    await this.ready;
-
-    this.ws.send(
-      JSON.stringify({ action: "update", payload: { id, changes } })
-    );
-  }
-
-  async markAllAsDone() {
-    await this.ready;
-
-    this.ws.send(JSON.stringify({ action: "markAllAsDone" }));
-  }
-
-  async delete(id) {
-    await this.ready;
-
-    this.ws.send(JSON.stringify({ action: "delete", payload: { id } }));
-  }
-
-  async deleteDone(id) {
-    await this.ready;
-
-    this.ws.send(JSON.stringify({ action: "deleteDone" }));
+    console.info("Sending to WS:", message);
+    this.ws.send(JSON.stringify(message));
   }
 }
 

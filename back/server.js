@@ -7,10 +7,11 @@ const db = new sqlite3.Database("todos.db", (err) => {
     console.error("Error opening database", err.message);
   } else {
     db.run(`CREATE TABLE IF NOT EXISTS todos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            label TEXT NOT NULL,
-            done INTEGER DEFAULT 0
-        )`);
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      done INTEGER DEFAULT 0
+    )`);
+    console.log("Table created");
   }
 });
 
@@ -21,34 +22,30 @@ wss.on("connection", (ws) => {
   console.log("Client connected");
   clients.add(ws);
 
-  // Send current todos to the new client
-  getAll(ws);
+  setTimeout(() => {
+    // Send current todos to the new client
+    getAll(ws);
+  }, SIMULATED_LATENCY_MS);
 
-  // On receiving a message from the client
-  ws.on("message", (message) => {
-    const data = JSON.parse(message);
-    const { action, payload } = data;
+  ws.on("message", (data) => {
+    const message = JSON.parse(data);
+    console.log("Received message: ", message);
 
-    // Use this timeout to simulate network latency
     setTimeout(() => {
-      switch (action) {
+      switch (message.action) {
         case "add":
-          add(ws, payload.label);
+          add(ws, message);
           break;
-        case "update":
-          update(ws, payload.id, payload.changes);
+        case "updateById":
+          updateById(ws, message);
           break;
-        case "markAllAsDone":
-          markAllAsDone(ws);
-          break;
-        case "delete":
-          deleteById(ws, payload.id);
-          break;
-        case "deleteDone":
-          deleteDone(ws);
+        case "deleteById":
+          deleteById(ws, message);
           break;
         default:
-          ws.send(JSON.stringify({ error: "Unknown action" }));
+          ws.send(
+            JSON.stringify({ error: "Unknown action: " + message.action })
+          );
       }
     }, SIMULATED_LATENCY_MS);
   });
@@ -59,8 +56,23 @@ wss.on("connection", (ws) => {
   });
 });
 
+function notify(message, excludeClient) {
+  console.log("Sending message:", message);
+
+  clients.forEach((client) => {
+    if (client !== excludeClient && client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+}
+
+function sendError(ws, error) {
+  console.error(error);
+
+  ws.send(JSON.stringify({ error }));
+}
+
 // Get all todos
-// When called without a specific ws client, it notifies all listeners
 function getAll(ws) {
   db.all("SELECT * FROM todos", (err, rows) => {
     if (err) {
@@ -73,104 +85,87 @@ function getAll(ws) {
       return;
     }
 
-    const message = JSON.stringify({ action: "items", items: rows });
+    console.log(`Sending todo list (${rows.length} item(s))`);
+    ws.send(JSON.stringify({ action: "getAll", payload: { todos: rows } }));
+  });
+}
 
-    if (ws) {
-      // Just notify the ws client
-      ws.send(message);
-    } else {
-      // Notify every listener
-      clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(message);
-        }
-      });
+function add(ws, message) {
+  const todo = message.payload.todo;
+
+  db.run(
+    "INSERT INTO todos (id, label, done) VALUES (?, ?, ?)",
+    [todo.id, todo.label, todo.done],
+    function (err) {
+      if (err) {
+        return sendError(
+          ws,
+          `Failed to add item "${JSON.stringify(todo)}": ${err}`
+        );
+      }
+
+      // Notify other clients
+      notify(message, ws);
     }
-  });
+  );
 }
 
-// Base function to write in the table
-function write({ ws, query, args, error, success }) {
-  if (!ws || !query) {
-    console.error("Error calling write: ws and query parameters are required");
-    return;
-  }
+function updateById(ws, message) {
+  const { id, changes } = message.payload;
 
-  db.run(query, args, function (err) {
-    if (err) {
-      ws.send(JSON.stringify({ error: error ?? "Error", err }));
-      return;
-    }
-
-    console.log(success ?? "Success");
-
-    getAll();
-  });
-}
-
-function add(ws, label) {
-  write({
-    ws,
-    query: "INSERT INTO todos (label) VALUES (?)",
-    args: [label],
-    success: `Added item: "${label}"`,
-    error: `Failed to add item "${label}"`,
-  });
-}
-
-function update(ws, id, changes) {
   let query = "UPDATE todos SET ";
   const args = [];
 
-  // Loop over the fields to update and construct the query dynamically
+  // Compute the changes query
   Object.keys(changes).forEach((field, index) => {
     query += `${field} = ?`;
 
     if (index < Object.keys(changes).length - 1) {
-      query += ", "; // Add a comma if it's not the last field
+      query += ", ";
     }
 
     args.push(changes[field]);
   });
 
-  query += " WHERE id = ?";
-  args.push(id); // Add the id to the values array
+  const idsToUpdate = Array.isArray(id) ? id.map(() => "?").join(", ") : "?";
 
-  write({
-    ws,
-    query,
-    args,
-    success: `Updated item #${id} with changes : ${JSON.stringify(changes)}`,
-    error: `Failed to update item ${id}`,
+  query += ` WHERE id IN (${idsToUpdate})`;
+  args.push(id);
+
+  db.run(query, args, function (err) {
+    if (err) {
+      ws.send(
+        JSON.stringify({ error: `Failed to update item ${idsToUpdate}` })
+      );
+
+      return;
+    }
+
+    // Notify other clients
+    notify(message, ws);
   });
 }
 
-function markAllAsDone(ws) {
-  write({
-    ws,
-    query: "UPDATE todos SET done = 1",
-    success: "Marked all as done",
-    error: "Failed to mark all as done",
-  });
-}
+// Delete an id or an array of ids
+function deleteById(ws, message) {
+  const id = message.payload.id;
 
-function deleteById(ws, id) {
-  write({
-    ws,
-    query: "DELETE FROM todos WHERE id = ?",
-    args: [id],
-    success: `Deleted item #${id}`,
-    error: `Failed to delete item ${id}`,
-  });
-}
+  const idsToDelete = Array.isArray(id) ? id.map(() => "?").join(", ") : "?";
 
-function deleteDone(ws) {
-  write({
-    ws,
-    query: "DELETE FROM todos WHERE done = 1",
-    success: "Deleted done todos",
-    error: "Failed to delete done todos",
-  });
+  db.run(
+    `DELETE FROM todos WHERE id IN (${idsToDelete})`,
+    [id],
+    function (err) {
+      if (err) {
+        ws.send(JSON.stringify({ error: `Failed to delete item ${id}` }));
+
+        return;
+      }
+
+      // Notify other clients
+      notify(message, ws);
+    }
+  );
 }
 
 console.log("WebSocket server is running on ws://localhost:8080");

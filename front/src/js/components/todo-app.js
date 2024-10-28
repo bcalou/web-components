@@ -1,3 +1,4 @@
+import { todoManager } from "../store/todo-manager.js";
 import { todoStore } from "../store/todo-store.js";
 import "./todo-form.js";
 import "./todo-icon-button.js";
@@ -110,7 +111,7 @@ customElements.define(
       );
 
       this.$todoForm.addEventListener("submit", (event) =>
-        todoStore.add(event.detail.label)
+        todoManager.add(event.detail.label)
       );
 
       // Transfer focus to form if list becomes empty

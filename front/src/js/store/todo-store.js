@@ -1,7 +1,5 @@
-import { todoWS } from "./todo-ws.js";
-
 /**
- * IndexedDB + WS todo store
+ * IndexedDB store
  */
 class TodoStore {
   constructor() {
@@ -11,8 +9,6 @@ class TodoStore {
     this.listeners = [];
 
     this.ready = this.initializeDB();
-
-    todoWS.subscribe(this.replaceStoreContent.bind(this));
   }
 
   // Register a function that will be called when the database is updated
@@ -31,6 +27,7 @@ class TodoStore {
   // Notify the changes to each listeners
   async notify() {
     const items = new Map((await this.getAll()).map((item) => [item.id, item]));
+
     this.listeners.forEach((callback) => callback(items));
   }
 
@@ -42,7 +39,6 @@ class TodoStore {
         const db = event.target.result;
         db.createObjectStore(this.storeName, {
           keyPath: "id",
-          autoIncrement: true,
         });
       };
 
@@ -57,22 +53,44 @@ class TodoStore {
     });
   }
 
+  send(message) {
+    console.info("Store received: ", message);
+
+    switch (message.action) {
+      case "getAll":
+        this.replaceStoreContent(message.payload);
+        break;
+      case "add":
+        this.add(message.payload);
+        break;
+      case "updateById":
+        this.updateById(message.payload);
+        break;
+      case "deleteById":
+        this.deleteById(message.payload);
+        break;
+      default:
+        break;
+    }
+  }
+
   // Replace the store content with a new list of items (backend update)
-  // TODO : review this VS one by one update
-  async replaceStoreContent(items) {
+  async replaceStoreContent(payload) {
+    const { todos } = payload;
+
     this.write(
       (store) => store.clear(),
       (result, store) => {
         console.info("Store was cleared");
 
-        if (!items || items.length === 0) {
-          console.info("Server sent no items");
+        if (!todos || todos.length === 0) {
+          console.info("Server sent no todos");
           this.notify();
           return;
         }
 
         Promise.all(
-          items.map((item) => {
+          todos.map((item) => {
             return new Promise((resolve, reject) => {
               const addRequest = store.add(item);
 
@@ -88,7 +106,7 @@ class TodoStore {
             });
           })
         ).then(() => {
-          console.info("All items were added");
+          console.info("All todos were added");
           this.notify();
         });
       },
@@ -182,21 +200,15 @@ class TodoStore {
     return count;
   }
 
-  async add(label) {
-    const todo = {
-      label,
-      done: 0,
-    };
-
-    await this.write(
-      (store) => store.add(todo),
+  add(payload) {
+    this.write(
+      (store) => store.add(payload.todo),
       (result) => console.info(`Added ${this.storeName} #${result}`)
     );
-
-    todoWS.add(todo);
   }
 
-  async update(id, changes) {
+  async updateById(payload) {
+    const { id, changes } = payload;
     const item = await this.getById(id);
 
     if (item) {
@@ -208,12 +220,13 @@ class TodoStore {
         (store) => store.put(item),
         () => console.info(`Updated ${this.storeName} #${id}`)
       );
-
-      todoWS.update(id, changes);
     }
   }
 
   async markAllAsDone() {
+    // TODO : id must be truly unique...
+    const ids = [];
+
     await this.writeForEach(
       (cursor, store) => {
         if (!cursor.value.done) {
@@ -221,22 +234,20 @@ class TodoStore {
             ...cursor.value,
             done: true,
           });
+
+          ids.push(cursor.value.id);
         }
       },
       (cursor) =>
         console.info(`Set todo #${cursor.value.id} done property to true`)
     );
-
-    todoWS.markAllAsDone();
   }
 
-  async delete(id) {
+  deleteById(payload) {
     this.write(
-      (store) => store.delete(id),
-      () => console.info(`Deleted ${this.storeName} #${id}`)
+      (store) => store.delete(payload.id),
+      () => console.info(`Deleted ${this.storeName} #${payload.id}`)
     );
-
-    todoWS.delete(id);
   }
 
   async deleteDone() {
@@ -248,8 +259,6 @@ class TodoStore {
       },
       (cursor) => console.info(`Deleted todo #${cursor.value.id}`)
     );
-
-    todoWS.deleteDone();
   }
 }
 
