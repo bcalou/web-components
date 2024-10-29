@@ -10,6 +10,59 @@ export class TodoStore {
     this.ready = this.initializeDB();
   }
 
+  // Get all the todos
+  async getAll() {
+    await this.ready;
+
+    return await new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(this.storeName, "readonly");
+      const store = transaction.objectStore(this.storeName);
+
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+
+      request.onerror = (error) => reject(`Failed to get all todos:`, error);
+    });
+  }
+
+  // Get the todo matching the given ID
+  async getById(id) {
+    await this.ready;
+
+    return await new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(this.storeName, "readonly");
+      const store = transaction.objectStore(this.storeName);
+
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result);
+
+      request.onerror = (error) => reject(`Failed to get todo #${id}:`, error);
+    });
+  }
+
+  send(message) {
+    console.info("Store received: ", message);
+
+    switch (message.action) {
+      case "setAll":
+        this.setAll(message.payload);
+        break;
+      case "add":
+        this.add(message.payload);
+        break;
+      case "updateByIds":
+        this.updateByIds(message.payload);
+        break;
+      case "deleteByIds":
+        this.deleteByIds(message.payload);
+        break;
+      default:
+        break;
+    }
+  }
+
   async initializeDB() {
     return await new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName);
@@ -32,115 +85,6 @@ export class TodoStore {
     });
   }
 
-  send(message) {
-    console.info("Store received: ", message);
-
-    switch (message.action) {
-      case "setAll":
-        this.setAll(message.payload);
-        break;
-      case "add":
-        this.add(message.payload);
-        break;
-      case "updateById":
-        this.updateById(message.payload);
-        break;
-      case "deleteById":
-        this.deleteById(message.payload);
-        break;
-      default:
-        break;
-    }
-  }
-
-  // Replace the store content with a new list of items (backend update)
-  async setAll(payload) {
-    const { todos } = payload;
-
-    this.write(
-      (store) => store.clear(),
-      (result, store) => {
-        console.info("Store was cleared");
-
-        if (!todos || todos.length === 0) {
-          console.info("Server sent no todos");
-          this.notify();
-          return;
-        }
-
-        Promise.all(
-          todos.map((item) => {
-            return new Promise((resolve, reject) => {
-              const addRequest = store.add(item);
-
-              addRequest.onsuccess = (event) => {
-                console.info(`Added ${this.storeName} #${event.target.result}`);
-                resolve();
-              };
-
-              addRequest.onerror = (event) => {
-                console.info(`Error adding ${this.storeName}: ${error}`);
-                reject();
-              };
-            });
-          })
-        ).then(() => {
-          console.info("All todos were added");
-          this.notify();
-        });
-      },
-      false // Don't notify the clearing of the store, wait for the rest
-    );
-  }
-
-  getStore(mode = "readonly") {
-    const transaction = this.db.transaction(this.storeName, mode);
-    const store = transaction.objectStore(this.storeName);
-
-    return { store, transaction };
-  }
-
-  // Base function to perform anything in the table, used by read & write
-  async request(getRequest, mode, onSuccess) {
-    await this.ready;
-
-    return await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, mode);
-      const store = transaction.objectStore(this.storeName);
-      const request = getRequest(store);
-
-      request.onsuccess = () => {
-        resolve(request.result);
-
-        if (onSuccess) {
-          onSuccess(request.result, store);
-        }
-      };
-
-      request.onerror = () => {
-        reject(`Error executing ${this.storeName} task: ${request.errorCode}`);
-      };
-    });
-  }
-
-  // Base function to read in the table
-  async read(getRequest) {
-    return this.request(getRequest, "readonly");
-  }
-
-  // Base function to write in the table
-  async write(getRequest, onSuccess, notify = true) {
-    return this.request(getRequest, "readwrite", (result, store) => {
-      if (notify) {
-        this.notify();
-      }
-
-      if (onSuccess) {
-        onSuccess(result, store);
-      }
-    });
-  }
-
   // Notify the changes to each listeners
   async notify() {
     const items = new Map((await this.getAll()).map((item) => [item.id, item]));
@@ -148,47 +92,127 @@ export class TodoStore {
     this.onUpdate(items);
   }
 
-  async getAll() {
-    return await this.read((store) => store.getAll());
+  // Replace the store content with a whole new list of items (backend update)
+  async setAll(payload) {
+    const transaction = this.db.transaction(this.storeName, "readwrite");
+    const store = transaction.objectStore(this.storeName);
+
+    const request = store.clear();
+
+    request.onerror = (error) => console.error("Failed to clear store:", error);
+
+    request.onsuccess = () => {
+      console.info("Store was cleared");
+
+      const { todos } = payload;
+
+      if (!todos || todos.length === 0) {
+        console.info("Server sent no todos");
+        this.notify();
+        return;
+      }
+
+      todos.forEach(async (todo) => {
+        await new Promise((resolve, reject) => {
+          const addRequest = store.add(todo);
+
+          addRequest.onsuccess = () => {
+            console.info(`Added todo #${todo.id}`);
+            resolve();
+          };
+
+          addRequest.onerror = (error) => {
+            console.info(`Error adding todo #${todo.id}:`, error);
+            reject();
+          };
+        });
+      });
+
+      transaction.oncomplete = () => {
+        console.info("All todos were added");
+        this.notify();
+      };
+
+      transaction.onerror = (error) =>
+        console.error("Adding all todos failed:", error);
+    };
   }
 
-  async getById(id) {
-    return await this.read((store) => store.get(id));
+  // Add the given todo to the store
+  async add(payload) {
+    await this.ready;
+
+    const { todo } = payload;
+
+    const transaction = this.db.transaction(this.storeName, "readwrite");
+    const store = transaction.objectStore(this.storeName);
+    const request = store.add(payload.todo);
+
+    request.onerror = (error) =>
+      console.error(`Failed adding todo #${todo.id}:`, error);
+    request.onsuccess = () => {
+      console.info(`Added todo #${todo.id}`);
+      this.notify();
+    };
   }
 
-  add(payload) {
-    this.write(
-      (store) => store.add(payload.todo),
-      (result) => console.info(`Added ${this.storeName} #${result}`)
-    );
-  }
+  // Update the given ids with the given changes
+  async updateByIds(payload) {
+    await this.ready;
 
-  async updateById(payload) {
-    const { id, changes } = payload;
-    const item = await this.getById(id);
+    const { ids, changes } = payload;
 
-    if (item) {
+    const transaction = this.db.transaction(this.storeName, "readwrite");
+    const store = transaction.objectStore(this.storeName);
+
+    ids.forEach(async (id) => {
+      // Find the item in the store
+      const item = await new Promise((resolve, reject) => {
+        const request = store.get(id);
+
+        request.onsuccess = () => resolve(request.result);
+
+        request.onerror = (error) =>
+          reject(`Failed to get the todo #${id}:`, error);
+      });
+
+      // Apply the changes to the item
       for (const [key, value] of Object.entries(changes)) {
         item[key] = value;
       }
 
-      this.write(
-        (store) => store.put(item),
-        () => console.info(`Updated ${this.storeName} #${id}`)
-      );
-    }
+      const request = store.put(item);
+
+      request.onerror = (error) =>
+        console.error(`Failed updating todo ${item.id}:`, error);
+      request.onsuccess = () =>
+        console.info(`Updated todo #${item.id} with changes:`, changes);
+    });
+
+    transaction.oncomplete = () => {
+      console.info("Update transaction completed");
+      this.notify();
+    };
+
+    transaction.onerror = (error) =>
+      console.error("Update transaction failed:", error);
   }
 
-  async deleteById(payload) {
-    const idsToDelete = Array.isArray(payload.id) ? payload.id : [payload.id];
+  // Delete the given ids
+  async deleteByIds(payload) {
+    await this.ready;
 
-    const { store, transaction } = this.getStore("readwrite");
+    const { ids } = payload;
 
-    idsToDelete.forEach((id) => {
-      const deleteRequest = store.delete(id);
+    const transaction = this.db.transaction(this.storeName, "readwrite");
+    const store = transaction.objectStore(this.storeName);
 
-      deleteRequest.onerror = () => console.error(`Failed deleting todo ${id}`);
-      deleteRequest.onsuccess = () => console.info(`Deleted todo #${id}`);
+    ids.forEach((id) => {
+      const request = store.delete(id);
+
+      request.onerror = (error) =>
+        console.error(`Failed deleting todo ${id}:`, error);
+      request.onsuccess = () => console.info(`Deleted todo #${id}`);
     });
 
     transaction.oncomplete = () => {
@@ -196,6 +220,7 @@ export class TodoStore {
       this.notify();
     };
 
-    transaction.onerror = () => console.error("Deletion transaction failed");
+    transaction.onerror = (error) =>
+      console.error("Deletion transaction failed:", error);
   }
 }

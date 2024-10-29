@@ -62,7 +62,8 @@ class TodoManager {
 
   // Update a todo
   updateById(id, changes) {
-    this.send({ action: "updateById", payload: { id, changes } });
+    // Transform the id into an array containing only itself
+    this.send({ action: "updateByIds", payload: { ids: [id], changes } });
   }
 
   // Set all todos to done = 1
@@ -72,14 +73,15 @@ class TodoManager {
       .map((todo) => todo.id);
 
     this.send({
-      action: "updateById",
-      payload: { id: idsToUpdate, changes: { done: 1 } },
+      action: "updateByIds",
+      payload: { ids: idsToUpdate, changes: { done: 1 } },
     });
   }
 
   // Delete a todo
   deleteById(id) {
-    this.send({ action: "deleteById", payload: { id } });
+    // Transform the id into an array containing only itself
+    this.send({ action: "deleteByIds", payload: { ids: [id] } });
   }
 
   // Delete all todos where done = 1
@@ -88,7 +90,7 @@ class TodoManager {
       .filter((todo) => todo.done)
       .map((todo) => todo.id);
 
-    this.send({ action: "deleteById", payload: { id: idsToDelete } });
+    this.send({ action: "deleteByIds", payload: { ids: idsToDelete } });
   }
 
   // Send a message to both the store and the WS

@@ -39,11 +39,11 @@ wss.on("connection", (ws) => {
         case "add":
           add(ws, message);
           break;
-        case "updateById":
-          updateById(ws, message);
+        case "updateByIds":
+          updateByIds(ws, message);
           break;
-        case "deleteById":
-          deleteById(ws, message);
+        case "deleteByIds":
+          deleteByIds(ws, message);
           break;
         default:
           ws.send(
@@ -113,7 +113,7 @@ function add(ws, message) {
   );
 }
 
-function updateById(ws, message) {
+function updateByIds(ws, message) {
   const { id, changes } = message.payload;
 
   let query = "UPDATE todos SET ";
@@ -150,7 +150,7 @@ function updateById(ws, message) {
 }
 
 // Delete an id or an array of ids
-function deleteById(ws, message) {
+function deleteByIds(ws, message) {
   const id = message.payload.id;
 
   const idsToDelete = Array.isArray(id) ? id : [id];
