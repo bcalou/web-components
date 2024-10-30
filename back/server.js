@@ -31,13 +31,16 @@ wss.on("connection", (ws) => {
     const message = JSON.parse(data);
     console.log("Received message: ", message);
 
+    let result;
+
     setTimeout(() => {
       switch (message.action) {
         case "getAll":
           getAll(ws);
           break;
         case "add":
-          add(ws, message);
+          result = add(ws, message);
+          console.log(result);
           break;
         case "updateByIds":
           updateByIds(ws, message);
@@ -46,9 +49,7 @@ wss.on("connection", (ws) => {
           deleteByIds(ws, message);
           break;
         default:
-          ws.send(
-            JSON.stringify({ error: "Unknown action: " + message.action })
-          );
+          sendError(ws, `Unknown action: ${message.action}`);
       }
     }, SIMULATED_LATENCY_MS);
   });
@@ -75,17 +76,11 @@ function sendError(ws, error) {
   ws.send(JSON.stringify({ error }));
 }
 
-// Get all todos
+// Get all todos and directly send them to the client
 function getAll(ws) {
-  db.all("SELECT * FROM todos", (err, rows) => {
-    if (err) {
-      if (ws) {
-        ws.send(JSON.stringify({ error: "Failed to fetch items", err }));
-      } else {
-        console.error("Failed to fetch items", err);
-      }
-
-      return;
+  db.all("SELECT * FROM todos", (error, rows) => {
+    if (error) {
+      return sendError(ws, `Failed to fetch items: ${error}`);
     }
 
     console.log(`Sending todo list (${rows.length} item(s))`);
@@ -93,28 +88,27 @@ function getAll(ws) {
   });
 }
 
+// Add a todo
 function add(ws, message) {
-  const todo = message.payload.todo;
+  const { todo } = message.payload;
 
-  db.run(
+  return db.run(
     "INSERT INTO todos (id, label, done) VALUES (?, ?, ?)",
     [todo.id, todo.label, todo.done],
-    function (err) {
-      if (err) {
-        return sendError(
-          ws,
-          `Failed to add item "${JSON.stringify(todo)}": ${err}`
-        );
+    function (error) {
+      if (error) {
+        return sendError(ws, `Failed to add item #"${todo.id}": ${error}`);
       }
 
       // Notify other clients
-      notify(message, ws);
+      // notify(message, ws);
     }
   );
 }
 
+// Update the given ids with the given changes
 function updateByIds(ws, message) {
-  const { id, changes } = message.payload;
+  const { ids, changes } = message.payload;
 
   let query = "UPDATE todos SET ";
   const args = [];
@@ -130,18 +124,12 @@ function updateByIds(ws, message) {
     args.push(changes[field]);
   });
 
-  const idsToUpdate = Array.isArray(id) ? id : [id];
+  query += ` WHERE id IN (${ids.map(() => "?").join(", ")})`;
+  args.push(...ids);
 
-  query += ` WHERE id IN (${idsToUpdate.map(() => "?").join(", ")})`;
-  args.push(...idsToUpdate);
-
-  db.run(query, args, function (err) {
-    if (err) {
-      ws.send(
-        JSON.stringify({ error: `Failed to update item ${idsToUpdate}` })
-      );
-
-      return;
+  db.run(query, args, function (error) {
+    if (error) {
+      return sendError(ws, `Failed to update item(s) ${ids}: `, error);
     }
 
     // Notify other clients
@@ -149,20 +137,16 @@ function updateByIds(ws, message) {
   });
 }
 
-// Delete an id or an array of ids
+// Delete the given ids
 function deleteByIds(ws, message) {
-  const id = message.payload.id;
-
-  const idsToDelete = Array.isArray(id) ? id : [id];
+  const { ids } = message.payload;
 
   db.run(
-    `DELETE FROM todos WHERE id IN (${idsToDelete.map(() => "?").join(", ")})`,
+    `DELETE FROM todos WHERE id IN (${ids.map(() => "?").join(", ")})`,
     [...idsToDelete],
-    function (err) {
-      if (err) {
-        ws.send(JSON.stringify({ error: `Failed to delete item ${id}` }));
-
-        return;
+    function (error) {
+      if (error) {
+        return sendError(ws, `Failed to delete item(s) ${id}:`, error);
       }
 
       // Notify other clients

@@ -2,21 +2,25 @@
  * IndexedDB store
  */
 export class TodoStore {
-  constructor(onUpdate) {
-    this.dbName = "todo-list";
-    this.storeName = "todo";
-    this.onUpdate = onUpdate;
+  #dbName = "todo-list";
+  #storeName = "todo";
+  #onUpdate;
+  #ready;
+  #db;
 
-    this.ready = this.initializeDB();
+  constructor(onUpdate) {
+    this.#onUpdate = onUpdate;
+
+    this.#ready = this.#initializeDB();
   }
 
   // Get all the todos
   async getAll() {
-    await this.ready;
+    await this.#ready;
 
     return await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, "readonly");
-      const store = transaction.objectStore(this.storeName);
+      const transaction = this.#db.transaction(this.#storeName, "readonly");
+      const store = transaction.objectStore(this.#storeName);
 
       const request = store.getAll();
 
@@ -28,11 +32,11 @@ export class TodoStore {
 
   // Get the todo matching the given ID
   async getById(id) {
-    await this.ready;
+    await this.#ready;
 
     return await new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, "readonly");
-      const store = transaction.objectStore(this.storeName);
+      const transaction = this.#db.transaction(this.#storeName, "readonly");
+      const store = transaction.objectStore(this.#storeName);
 
       const request = store.get(id);
 
@@ -47,36 +51,36 @@ export class TodoStore {
 
     switch (message.action) {
       case "setAll":
-        this.setAll(message.payload);
+        this.#setAll(message.payload);
         break;
       case "add":
-        this.add(message.payload);
+        this.#add(message.payload);
         break;
       case "updateByIds":
-        this.updateByIds(message.payload);
+        this.#updateByIds(message.payload);
         break;
       case "deleteByIds":
-        this.deleteByIds(message.payload);
+        this.#deleteByIds(message.payload);
         break;
       default:
         break;
     }
   }
 
-  async initializeDB() {
+  async #initializeDB() {
     return await new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName);
+      const request = indexedDB.open(this.#dbName);
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-        db.createObjectStore(this.storeName, {
+        db.createObjectStore(this.#storeName, {
           keyPath: "id",
         });
       };
 
       request.onsuccess = (event) => {
-        this.db = event.target.result;
-        resolve(this.db);
+        this.#db = event.target.result;
+        resolve(this.#db);
       };
 
       request.onerror = (event) => {
@@ -86,16 +90,16 @@ export class TodoStore {
   }
 
   // Notify the changes to each listeners
-  async notify() {
+  async #notify() {
     const items = new Map((await this.getAll()).map((item) => [item.id, item]));
 
-    this.onUpdate(items);
+    this.#onUpdate(items);
   }
 
   // Replace the store content with a whole new list of items (backend update)
-  async setAll(payload) {
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
+  async #setAll(payload) {
+    const transaction = this.#db.transaction(this.#storeName, "readwrite");
+    const store = transaction.objectStore(this.#storeName);
 
     const request = store.clear();
 
@@ -108,7 +112,7 @@ export class TodoStore {
 
       if (!todos || todos.length === 0) {
         console.info("Server sent no todos");
-        this.notify();
+        this.#notify();
         return;
       }
 
@@ -130,7 +134,7 @@ export class TodoStore {
 
       transaction.oncomplete = () => {
         console.info("All todos were added");
-        this.notify();
+        this.#notify();
       };
 
       transaction.onerror = (error) =>
@@ -139,31 +143,31 @@ export class TodoStore {
   }
 
   // Add the given todo to the store
-  async add(payload) {
-    await this.ready;
+  async #add(payload) {
+    await this.#ready;
 
     const { todo } = payload;
 
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
+    const transaction = this.#db.transaction(this.#storeName, "readwrite");
+    const store = transaction.objectStore(this.#storeName);
     const request = store.add(payload.todo);
 
     request.onerror = (error) =>
       console.error(`Failed adding todo #${todo.id}:`, error);
     request.onsuccess = () => {
       console.info(`Added todo #${todo.id}`);
-      this.notify();
+      this.#notify();
     };
   }
 
   // Update the given ids with the given changes
-  async updateByIds(payload) {
-    await this.ready;
+  async #updateByIds(payload) {
+    await this.#ready;
 
     const { ids, changes } = payload;
 
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
+    const transaction = this.#db.transaction(this.#storeName, "readwrite");
+    const store = transaction.objectStore(this.#storeName);
 
     ids.forEach(async (id) => {
       // Find the item in the store
@@ -191,7 +195,7 @@ export class TodoStore {
 
     transaction.oncomplete = () => {
       console.info("Update transaction completed");
-      this.notify();
+      this.#notify();
     };
 
     transaction.onerror = (error) =>
@@ -199,13 +203,13 @@ export class TodoStore {
   }
 
   // Delete the given ids
-  async deleteByIds(payload) {
-    await this.ready;
+  async #deleteByIds(payload) {
+    await this.#ready;
 
     const { ids } = payload;
 
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
+    const transaction = this.#db.transaction(this.#storeName, "readwrite");
+    const store = transaction.objectStore(this.#storeName);
 
     ids.forEach((id) => {
       const request = store.delete(id);
@@ -217,7 +221,7 @@ export class TodoStore {
 
     transaction.oncomplete = () => {
       console.info("Deletion transaction completed");
-      this.notify();
+      this.#notify();
     };
 
     transaction.onerror = (error) =>
