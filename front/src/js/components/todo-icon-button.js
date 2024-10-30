@@ -4,17 +4,19 @@
 customElements.define(
   "todo-icon-button",
   class TodoIconButton extends HTMLElement {
-    static observedAttributes = ["icon", "label"];
-
     connectedCallback() {
-      this.attachShadow({ mode: "open" });
+      this.icon = this.getAttribute("icon");
+      this.label = this.getAttribute("label");
 
-      if (!this.hasAttribute("icon") || !this.hasAttribute("label")) {
+      if (!this.icon || !this.label) {
         console.error(
           "todo-icon-button component requires both a label and an icon"
         );
+
         return;
       }
+
+      this.attachShadow({ mode: "open" });
 
       this.shadowRoot.innerHTML = /* HTML */ `<style>
           button {
@@ -31,9 +33,7 @@ customElements.define(
           }
         </style>
 
-        <button aria-label="${this.getAttribute("label")}">
-          ${this.getAttribute("icon")}
-        </button>`;
+        <button aria-label="${this.label}">${this.icon}</button>`;
     }
   }
 );

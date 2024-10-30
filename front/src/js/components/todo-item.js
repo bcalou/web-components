@@ -6,9 +6,14 @@ import { todoManager } from "../data/todo-manager.js";
 customElements.define(
   "todo-item",
   class TodoItem extends HTMLElement {
-    static observedAttributes = ["todo-id"];
-
     connectedCallback() {
+      this.id = this.getAttribute("todo-id");
+
+      if (!this.id) {
+        console.error("todo-item component must receive a todo-id attribute");
+        return;
+      }
+
       this.attachShadow({ mode: "open", delegatesFocus: true });
 
       this.init();
@@ -25,17 +30,10 @@ customElements.define(
     }
 
     async init() {
-      const id = this.getAttribute("todo-id");
-
-      if (!id) {
-        console.error("todo-item component must receive a todo-id attribute");
-        return;
-      }
-
-      this.todo = await todoManager.getById(id);
+      this.todo = await todoManager.getById(this.id);
 
       if (!this.todo) {
-        console.error(`No todo-item found with id ${id}`);
+        console.error(`No todo-item found with id ${this.id}`);
         return;
       }
 

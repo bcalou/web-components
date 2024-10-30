@@ -4,14 +4,12 @@
 customElements.define(
   "todo-form",
   class TodoForm extends HTMLElement {
-    static observedAttributes = [
-      "autofocus",
-      "default-value",
-      "submit-icon",
-      "submit-label",
-    ];
-
     connectedCallback() {
+      this.defaultValue = this.getAttribute("default-value") ?? "";
+      this.submitLabel = this.getAttribute("submit-label") ?? "Ajouter";
+      this.submitIcon = this.getAttribute("submit-icon") ?? "➕";
+      this.autofocus = this.hasAttribute("autofocus");
+
       this.attachShadow({ mode: "open", delegatesFocus: true });
 
       this.shadowRoot.innerHTML = /* HTML */ ` <style>
@@ -48,19 +46,19 @@ customElements.define(
               name="label"
               required
               maxlength="100"
-              value="${this.getAttribute("default-value") ?? ""}"
+              value="${this.defaultValue}"
               pattern=".*[a-zA-Z0-9].*"
           /></label>
           <todo-icon-button
-            label="${this.getAttribute("submit-label") ?? "Ajouter"}"
-            icon="${this.getAttribute("submit-icon") ?? "➕"}"
+            label="${this.submitLabel}"
+            icon="${this.submitIcon}"
           ></todo-icon-button>
         </form>`;
 
       this.$form = this.shadowRoot.lastElementChild;
       this.$input = this.shadowRoot.querySelector("input");
 
-      if (this.hasAttribute("autofocus")) {
+      if (this.autofocus) {
         this.$input.focus();
 
         // Set cursor to end

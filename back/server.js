@@ -27,36 +27,7 @@ wss.on("connection", (ws) => {
     getAll(ws);
   }, SIMULATED_LATENCY_MS);
 
-  ws.on("message", (data) => {
-    const message = JSON.parse(data);
-    console.log("Received message: ", message);
-
-    const { action, payload } = message;
-
-    let result;
-
-    setTimeout(() => {
-      switch (action) {
-        case "getAll":
-          getAll(ws);
-          break;
-        case "add":
-          add(payload).then(
-            () => notify(message, ws),
-            (error) => ws.send(JSON.stringify({ error }))
-          );
-          break;
-        case "updateByIds":
-          updateByIds(ws, message);
-          break;
-        case "deleteByIds":
-          deleteByIds(ws, message);
-          break;
-        default:
-          sendError(ws, `Unknown action: ${message.action}`);
-      }
-    }, SIMULATED_LATENCY_MS);
-  });
+  ws.on("message", (data) => onMessage(data, ws));
 
   ws.on("close", () => {
     console.log("Client disconnected");
@@ -64,23 +35,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-function notify(message, excludeClient) {
-  console.log("Sending message:", message);
-
-  clients.forEach((client) => {
-    if (client !== excludeClient && client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(message));
-    }
-  });
-}
-
-function sendError(ws, error) {
-  console.error(error);
-
-  ws.send(JSON.stringify({ error }));
-}
-
-// Get all todos and directly send them to the client
+// Get all todos and send them to the client
 function getAll(ws) {
   db.all("SELECT * FROM todos", (error, rows) => {
     if (error) {
@@ -89,6 +44,53 @@ function getAll(ws) {
 
     console.log(`Sending todo list (${rows.length} item(s))`);
     ws.send(JSON.stringify({ action: "setAll", payload: { todos: rows } }));
+  });
+}
+
+// Interpret a received message
+function onMessage(data, ws) {
+  const message = JSON.parse(data);
+  console.log("Received message: ", message);
+
+  const { action, payload } = message;
+
+  setTimeout(() => {
+    let request;
+
+    switch (action) {
+      case "add":
+        request = add(payload);
+        break;
+      case "updateByIds":
+        request = updateByIds(payload);
+        break;
+      case "deleteByIds":
+        request = deleteByIds(payload);
+        break;
+      default:
+        ws.send(JSON.stringify({ error: `Unknown action: ${action}` }));
+        return;
+    }
+
+    request.then(
+      // If the request was successful, pass the message to other clients
+      () => notify(message, ws),
+      // If not, send the error to the requesting client
+      (error) => {
+        console.error(error);
+        ws.send(JSON.stringify({ error }));
+      }
+    );
+  }, SIMULATED_LATENCY_MS);
+}
+
+function notify(message, excludeClient) {
+  console.log("Sending message:", message);
+
+  clients.forEach((client) => {
+    if (client !== excludeClient && client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
   });
 }
 
@@ -111,8 +113,8 @@ function add(payload) {
 }
 
 // Update the given ids with the given changes
-function updateByIds(ws, message) {
-  const { ids, changes } = message.payload;
+function updateByIds(payload) {
+  const { ids, changes } = payload;
 
   let query = "UPDATE todos SET ";
   const args = [];
@@ -131,32 +133,32 @@ function updateByIds(ws, message) {
   query += ` WHERE id IN (${ids.map(() => "?").join(", ")})`;
   args.push(...ids);
 
-  db.run(query, args, function (error) {
-    if (error) {
-      return sendError(ws, `Failed to update item(s) ${ids}: `, error);
-    }
-
-    // Notify other clients
-    notify(message, ws);
+  return new Promise((resolve, reject) => {
+    db.run(query, args, function (error) {
+      if (error) {
+        reject(`Failed to update item(s) ${ids}: ${error})`);
+      }
+      resolve();
+    });
   });
 }
 
 // Delete the given ids
-function deleteByIds(ws, message) {
-  const { ids } = message.payload;
+function deleteByIds(payload) {
+  const { ids } = payload;
 
-  db.run(
-    `DELETE FROM todos WHERE id IN (${ids.map(() => "?").join(", ")})`,
-    [...idsToDelete],
-    function (error) {
-      if (error) {
-        return sendError(ws, `Failed to delete item(s) ${id}:`, error);
+  return new Promise((resolve, reject) => {
+    db.run(
+      `DELETE FROM todos WHERE id IN (${ids.map(() => "?").join(", ")})`,
+      [...ids],
+      function (error) {
+        if (error) {
+          reject(`Failed to delete item(s) ${id}:, ${error}`);
+        }
+        resolve();
       }
-
-      // Notify other clients
-      notify(message, ws);
-    }
-  );
+    );
+  });
 }
 
 console.log("WebSocket server is running on ws://localhost:8080");

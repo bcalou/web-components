@@ -69,8 +69,6 @@ customElements.define(
     }
 
     update(updatedTodos) {
-      console.log({ updatedTodos });
-
       // Check if there are new todos to display
       updatedTodos.forEach((updatedTodo) => {
         if (!this.todos.get(updatedTodo.id)) {
