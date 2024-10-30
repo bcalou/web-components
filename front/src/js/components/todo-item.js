@@ -76,10 +76,10 @@ customElements.define(
             height: 1.5rem;
             width: 1.5rem;
             flex-shrink: 0;
-          }
 
-          input:checked ~ span {
-            text-decoration: line-through;
+            &:checked ~ span {
+              text-decoration: line-through;
+            }
           }
 
           .actions {

@@ -23,10 +23,10 @@ customElements.define(
             align-items: center;
             gap: 0.75rem;
             flex-grow: 1;
-          }
 
-          label span {
-            flex-shrink: 0;
+            span {
+              flex-shrink: 0;
+            }
           }
 
           input {

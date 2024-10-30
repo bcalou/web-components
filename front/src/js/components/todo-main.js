@@ -44,11 +44,11 @@ customElements.define(
             color: var(--todo-color-white);
             border: none;
             cursor: pointer;
-          }
 
-          button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
           }
         </style>
 

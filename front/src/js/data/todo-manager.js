@@ -1,22 +1,11 @@
 import { TodoStore } from "./todo-store.js";
-import { TodoWS } from "./todo-ws.js";
 
 class TodoManager {
   #store;
-  #ws;
   #listeners = [];
 
   constructor() {
     this.#store = new TodoStore((items) => this.#notify(items));
-
-    this.#ws = new TodoWS(
-      (message) => this.#store.send(message),
-      // If WS failed, trigger a notifcation from the store instead
-      () => {
-        console.warn("WS unavailable, working in local mode");
-        this.#store.notify();
-      }
-    );
   }
 
   // Register a function that will be called when the store is updated
@@ -105,10 +94,9 @@ class TodoManager {
     );
   }
 
-  // Send a message to both the store and the WS
+  // Send a message to the store
   #send(message) {
     this.#store.send(message);
-    this.#ws.send(message);
   }
 }
 
