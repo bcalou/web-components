@@ -9,7 +9,8 @@ const db = new sqlite3.Database("todos.db", (err) => {
     db.run(`CREATE TABLE IF NOT EXISTS todos (
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
-      done INTEGER DEFAULT 0
+      done INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
     console.log("Table created");
   }
@@ -37,9 +38,9 @@ wss.on("connection", (ws) => {
 
 // Get all todos and send them to the client
 function getAll(ws) {
-  db.all("SELECT * FROM todos", (error, rows) => {
+  db.all("SELECT * FROM todos ORDER BY created_at", (error, rows) => {
     if (error) {
-      return sendError(ws, `Failed to fetch items: ${error}`);
+      ws.send(JSON.stringify({ error: `Failed to fetch items: ${error}` }));
     }
 
     console.log(`Sending todo list (${rows.length} item(s))`);
