@@ -23,10 +23,6 @@ customElements.define(
       if (this.unsubscribe) {
         this.unsubscribe();
       }
-
-      if (this.hasFocus) {
-        this.dispatchEvent(new CustomEvent("delete"));
-      }
     }
 
     async init() {

@@ -68,6 +68,13 @@ export class TodoStore {
     }
   }
 
+  // Notify the changes to each listeners
+  async notify() {
+    const items = new Map((await this.getAll()).map((item) => [item.id, item]));
+
+    this.#onUpdate(items);
+  }
+
   async #initializeDB() {
     return await new Promise((resolve, reject) => {
       const request = indexedDB.open(this.#dbName);
@@ -90,13 +97,6 @@ export class TodoStore {
     });
   }
 
-  // Notify the changes to each listeners
-  async #notify() {
-    const items = new Map((await this.getAll()).map((item) => [item.id, item]));
-
-    this.#onUpdate(items);
-  }
-
   // Replace the store content with a whole new list of items (backend update)
   async #setAll(payload) {
     const transaction = this.#db.transaction(this.#storeName, "readwrite");
@@ -113,7 +113,7 @@ export class TodoStore {
 
       if (!todos || todos.length === 0) {
         console.info("Server sent no todos");
-        this.#notify();
+        this.notify();
         return;
       }
 
@@ -135,7 +135,7 @@ export class TodoStore {
 
       transaction.oncomplete = () => {
         console.info("All todos were added");
-        this.#notify();
+        this.notify();
       };
 
       transaction.onerror = (error) =>
@@ -157,7 +157,7 @@ export class TodoStore {
       console.error(`Failed adding todo #${todo.id}:`, error);
     request.onsuccess = () => {
       console.info(`Added todo #${todo.id}`);
-      this.#notify();
+      this.notify();
     };
   }
 
@@ -196,7 +196,7 @@ export class TodoStore {
 
     transaction.oncomplete = () => {
       console.info("Update transaction completed");
-      this.#notify();
+      this.notify();
     };
 
     transaction.onerror = (error) =>
@@ -222,7 +222,7 @@ export class TodoStore {
 
     transaction.oncomplete = () => {
       console.info("Deletion transaction completed");
-      this.#notify();
+      this.notify();
     };
 
     transaction.onerror = (error) =>

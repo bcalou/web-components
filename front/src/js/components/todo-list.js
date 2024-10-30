@@ -1,5 +1,7 @@
 import { todoManager } from "../data/todo-manager.js";
 
+// TODO : fix ordering
+
 /**
  * The actual list of items
  */
@@ -50,21 +52,23 @@ customElements.define(
       const $todoItem = document.createElement("todo-item");
       $todoItem.setAttribute("todo-id", todo.id);
 
-      $todoItem.addEventListener("delete", () => this.onDelete($todoLi));
-
       $todoLi.appendChild($todoItem);
       this.shadowRoot.lastElementChild.appendChild($todoLi);
     }
 
     // Handle focus position when an item is deleted
-    // TODO : handle deletion from backend...next sibling not available!
-    onDelete($todoLi) {
-      if ($todoLi.nextSibling) {
-        $todoLi.nextSibling.firstElementChild.focus();
-      } else if ($todoLi.previousSibling) {
-        $todoLi.previousSibling.firstElementChild.focus();
-      } else {
-        this.dispatchEvent(new CustomEvent("empty"));
+    onDelete($todo) {
+      // If the todo holds the focus, we need to place it elsewhere
+      if ($todo.shadowRoot.activeElement) {
+        const $todoLi = $todo.parentElement;
+
+        if ($todoLi.nextSibling) {
+          $todoLi.nextSibling.firstElementChild.focus();
+        } else if ($todoLi.previousSibling) {
+          $todoLi.previousSibling.firstElementChild.focus();
+        } else {
+          this.dispatchEvent(new CustomEvent("empty"));
+        }
       }
     }
 
@@ -81,9 +85,13 @@ customElements.define(
       // Check if todos need to be removed
       this.todos.forEach((todo) => {
         if (!updatedTodos.get(todo.id)) {
-          this.shadowRoot
-            .querySelector(`[todo-id="${todo.id}"]`)
-            .parentElement.remove();
+          const $todoToRemove = this.shadowRoot.querySelector(
+            `[todo-id="${todo.id}"]`
+          );
+
+          this.onDelete($todoToRemove);
+
+          $todoToRemove.parentElement.remove();
 
           this.todos.delete(todo.id); // Update local state
         }

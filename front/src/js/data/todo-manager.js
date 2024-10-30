@@ -8,7 +8,15 @@ class TodoManager {
 
   constructor() {
     this.#store = new TodoStore((items) => this.#notify(items));
-    this.#ws = new TodoWS((message) => this.#store.send(message));
+
+    this.#ws = new TodoWS(
+      (message) => this.#store.send(message),
+      // If WS failed, trigger a notifcation from the store instead
+      () => {
+        console.warn("WS unavailable, working in local mode");
+        this.#store.notify();
+      }
+    );
   }
 
   // Register a function that will be called when the store is updated
