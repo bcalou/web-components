@@ -31,16 +31,20 @@ wss.on("connection", (ws) => {
     const message = JSON.parse(data);
     console.log("Received message: ", message);
 
+    const { action, payload } = message;
+
     let result;
 
     setTimeout(() => {
-      switch (message.action) {
+      switch (action) {
         case "getAll":
           getAll(ws);
           break;
         case "add":
-          result = add(ws, message);
-          console.log(result);
+          add(payload).then(
+            () => notify(message, ws),
+            (error) => ws.send(JSON.stringify({ error }))
+          );
           break;
         case "updateByIds":
           updateByIds(ws, message);
@@ -89,21 +93,21 @@ function getAll(ws) {
 }
 
 // Add a todo
-function add(ws, message) {
-  const { todo } = message.payload;
+function add(payload) {
+  const { todo } = payload;
 
-  return db.run(
-    "INSERT INTO todos (id, label, done) VALUES (?, ?, ?)",
-    [todo.id, todo.label, todo.done],
-    function (error) {
-      if (error) {
-        return sendError(ws, `Failed to add item #"${todo.id}": ${error}`);
+  return new Promise((resolve, reject) => {
+    db.run(
+      "INSERT INTO todos (id, label, done) VALUES (?, ?, ?)",
+      [todo.id, todo.label, todo.done],
+      function (error) {
+        if (error) {
+          reject(`Failed to add item #"${todo.id}": ${error}`);
+        }
+        resolve();
       }
-
-      // Notify other clients
-      // notify(message, ws);
-    }
-  );
+    );
+  });
 }
 
 // Update the given ids with the given changes

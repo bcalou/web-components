@@ -48,19 +48,20 @@ export class TodoStore {
 
   send(message) {
     console.info("Store received: ", message);
+    const { action, payload } = message;
 
-    switch (message.action) {
+    switch (action) {
       case "setAll":
-        this.#setAll(message.payload);
+        this.#setAll(payload);
         break;
       case "add":
-        this.#add(message.payload);
+        this.#add(payload);
         break;
       case "updateByIds":
-        this.#updateByIds(message.payload);
+        this.#updateByIds(payload);
         break;
       case "deleteByIds":
-        this.#deleteByIds(message.payload);
+        this.#deleteByIds(payload);
         break;
       default:
         break;
