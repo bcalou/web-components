@@ -1,4 +1,4 @@
-import { todoManager } from "../data/todo-manager.js";
+import { todoStore } from "../data/todo-store.js";
 
 /**
  * Detail of a todo list item and associated actions (delete, rename...)
@@ -26,7 +26,7 @@ customElements.define(
     }
 
     async init() {
-      this.todo = await todoManager.getById(this.id);
+      this.todo = await todoStore.getById(this.id);
 
       if (!this.todo) {
         console.error(`No todo-item found with id ${this.id}`);
@@ -35,7 +35,7 @@ customElements.define(
 
       this.renderViewMode();
 
-      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
+      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
 
       this.shadowRoot.addEventListener("focusin", () => (this.hasFocus = true));
       this.shadowRoot.addEventListener(
@@ -110,12 +110,12 @@ customElements.define(
 
       this.$input = this.shadowRoot.querySelector("input");
       this.$input.addEventListener("input", (event) =>
-        todoManager.updateById(this.todo.id, { done: event.target.checked })
+        todoStore.updateById(this.todo.id, { done: event.target.checked })
       );
 
       this.shadowRoot
         .getElementById("delete")
-        .addEventListener("click", () => todoManager.deleteById(this.todo.id));
+        .addEventListener("click", () => todoStore.deleteById(this.todo.id));
 
       this.$edit = this.shadowRoot.getElementById("edit");
       this.$edit.addEventListener("click", this.renderEditMode.bind(this));
@@ -146,7 +146,7 @@ customElements.define(
 
     onSubmit(event) {
       this.todo.label = event.detail.label;
-      todoManager.updateById(this.todo.id, { label: this.todo.label });
+      todoStore.updateById(this.todo.id, { label: this.todo.label });
 
       this.renderViewMode(true);
     }

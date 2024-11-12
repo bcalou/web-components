@@ -1,4 +1,4 @@
-import { todoManager } from "../data/todo-manager.js";
+import { todoStore } from "../data/todo-store.js";
 import "./todo-main.js";
 
 /**
@@ -93,7 +93,7 @@ customElements.define(
       this.$status = this.shadowRoot.querySelector('[role="status"]');
       this.$content = this.shadowRoot.querySelector(".content");
 
-      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
+      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
     }
 
     disconnectedCallback() {

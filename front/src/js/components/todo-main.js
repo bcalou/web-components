@@ -1,4 +1,4 @@
-import { todoManager } from "../data/todo-manager.js";
+import { todoStore } from "../data/todo-store.js";
 import "./todo-form.js";
 import "./todo-icon-button.js";
 import "./todo-item.js";
@@ -68,7 +68,7 @@ customElements.define(
       this.$deleteDone = this.shadowRoot.getElementById("deleteDone");
 
       this.$todoForm.addEventListener("submit", (event) =>
-        todoManager.add(event.detail.label)
+        todoStore.add(event.detail.label)
       );
 
       // Transfer focus to form if list becomes empty
@@ -79,16 +79,16 @@ customElements.define(
 
       this.$markAllAsDone.addEventListener(
         "click",
-        todoManager.markAllAsDone.bind(todoManager)
+        todoStore.markAllAsDone.bind(todoStore)
       );
 
       this.$deleteDone.addEventListener(
         "click",
-        todoManager.deleteDone.bind(todoManager)
+        todoStore.deleteDone.bind(todoStore)
       );
 
       this.update();
-      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
+      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
     }
 
     disconnectedCallback() {
@@ -96,7 +96,7 @@ customElements.define(
     }
 
     async update() {
-      const { total, done, remaining } = await todoManager.getCount();
+      const { total, done, remaining } = await todoStore.getCount();
 
       this.setState(total, remaining);
 

@@ -1,6 +1,4 @@
-import { todoManager } from "../data/todo-manager.js";
-
-// TODO : fix ordering
+import { todoStore } from "../data/todo-store.js";
 
 /**
  * The actual list of items
@@ -38,12 +36,12 @@ customElements.define(
     async init() {
       // Get a local record of the todos for clever DOM updates
       this.todos = new Map(
-        (await todoManager.getAll()).map((todo) => [todo.id, todo])
+        (await todoStore.getAll()).map((todo) => [todo.id, todo])
       );
 
       this.todos.forEach(this.showTodo.bind(this));
 
-      this.unsubscribe = todoManager.subscribe(this.update.bind(this));
+      this.unsubscribe = todoStore.subscribe(this.update.bind(this));
     }
 
     showTodo(todo) {
