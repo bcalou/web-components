@@ -155,6 +155,7 @@ export class TodoStore {
 
     request.onerror = (error) =>
       console.error(`Failed adding todo #${todo.id}:`, error);
+
     request.onsuccess = () => {
       console.info(`Added todo #${todo.id}`);
       this.notify();
@@ -190,6 +191,7 @@ export class TodoStore {
 
       request.onerror = (error) =>
         console.error(`Failed updating todo ${item.id}:`, error);
+
       request.onsuccess = () =>
         console.info(`Updated todo #${item.id} with changes:`, changes);
     });
@@ -217,6 +219,7 @@ export class TodoStore {
 
       request.onerror = (error) =>
         console.error(`Failed deleting todo ${id}:`, error);
+
       request.onsuccess = () => console.info(`Deleted todo #${id}`);
     });
 

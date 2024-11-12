@@ -11,7 +11,7 @@ class TodoManager {
 
     this.#ws = new TodoWS(
       (message) => this.#store.send(message),
-      // If WS failed, trigger a notifcation from the store instead
+      // If WS failed, trigger a notification from the store instead
       () => {
         console.warn("WS unavailable, working in local mode");
         this.#store.notify();
