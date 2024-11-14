@@ -4,7 +4,6 @@ import { TodoWS } from "./todo-ws.js";
 class TodoStore {
   #db;
   #ws;
-  #offline = false;
   #listeners = [];
 
   constructor() {
@@ -12,13 +11,9 @@ class TodoStore {
 
     this.#ws = new TodoWS(
       (message) => this.#db.send(message),
-      // If WS failed
+      // If WS failed, trigger a notification from the store instead
       () => {
         console.warn("WS unavailable, working in local mode");
-        this.#offline = true;
-
-        // Trigger a notification from the store instead
-        // This will replace the expected answer from the back
         this.#db.notify();
       }
     );
@@ -59,19 +54,9 @@ class TodoStore {
 
   // Add a todo
   add(label) {
-    const todo = {
-      id: crypto.randomUUID(),
-      label,
-      done: 0,
-    };
-
-    if (this.#offline) {
-      todo.offline = 1;
-    }
-
     this.#send({
       action: "add",
-      payload: { todo },
+      payload: { todo: { id: crypto.randomUUID(), label, done: 0 } },
     });
   }
 
